@@ -195,7 +195,9 @@ button.eqs{cursor:pointer} button.eqs:hover,button.eqs:focus-visible{border-colo
 .verlabel{margin-top:10px;opacity:.7}
 .pw.wide{width:min(520px,100%)}
 #lvup.live{background:#070a0b66}
-#fps{position:fixed;top:8px;right:10px;z-index:30;font:700 13px var(--mono);color:#9fe870;background:#0a0f12b0;padding:3px 7px;pointer-events:none}
+#fps{position:fixed;top:8px;right:10px;z-index:30;font:700 13px var(--mono);color:#9fe870;background:#0a0f12b0;padding:3px 7px;pointer-events:none;text-align:right;line-height:1.4}
+#fps small{font-size:10px;color:#cfe6d0;font-weight:400}
+#gl{transition:opacity .5s}
 .mapc .ev{font-size:10px;color:var(--hazard);letter-spacing:.06em;font-weight:600}
 </style>
 </head><body>
@@ -4840,8 +4842,41 @@ function useEnv(id){
 function setMap(id,arena,props){
   if(!ready)return;
   if(!envs[id]){ARENA=arena||ARENA;PROPS=props||[];}
-  useEnv(id);
+  useEnv(id);warm(id);
 }
+/* Shader im Hintergrund vorbereiten (KHR_parallel_shader_compile), damit der Start nicht einfriert */
+const MAPBOSS={halle:['b1','b2','b3'],hafen:['b4','b5','b6'],labor:['b7','b8','b9'],winter:['x1','x2','x3'],friedhof:['x4','x5','x6'],garten:['x7','x8','x9']};
+const SOLBOSS={b6:1,b9:1,x3:1,x6:1};
+let warming=0,warmQ=Promise.resolve(),warmT={};const warmDone={};
+function warm(id,extra){
+  if(!R||!R.compileAsync){warmDone[id]=true;return Promise.resolve();}
+  const key=id+(extra?':'+extra:'');if(warmT[key])return warmT[key];
+  warming++;
+  const p=warmQ.then(()=>new Promise(res=>{
+    const shown=[];let done=false;
+    const fin=()=>{if(done)return;done=true;for(const o of shown)o.visible=false;warming=Math.max(0,warming-1);warmDone[id]=true;res();};
+    try{
+      if(MAPBOSS[id])for(const t of MAPBOSS[id])if(!bossModels[t]&&(!SOLBOSS[t]||SOLDIER.ready))bossModels[t]=makeBoss(t);
+      const walk=o=>{if(o.isLight)return;if(o!==envG&&o.parent===scene&&Object.values(envs).includes(o)&&o!==envs[id])return;
+        if(!o.visible){o.visible=true;shown.push(o);}for(const c of o.children)walk(c);};
+      for(const c of scene.children)walk(c);
+      const t0=performance.now();
+      R.compileAsync(scene,cams[0]).then(()=>{try{performance.measure('lb:warm:'+key,{start:t0});}catch(e){}fin();},()=>fin());
+      setTimeout(fin,15000);
+    }catch(e){console.error(e);fin();}
+  }));
+  warmQ=p;warmT[key]=p;return p;
+}
+// Karte schon beim Auswählen im Menü vorbereiten
+function prepare(id,arena,props){
+  if(!ready||envs[id])return warm(id);
+  const keep={ARENA,PROPS,envG,fixtures,CEIL};
+  ARENA=arena;PROPS=props;buildEnv(id);envs[id].visible=(id===curEnv);
+  ARENA=keep.ARENA;PROPS=keep.PROPS;envG=keep.envG;fixtures=keep.fixtures;CEIL=keep.CEIL;
+  return warm(id);
+}
+const isWarm=id=>warming===0&&!!warmDone[id||curEnv];
+function gpuName(){try{const gl=R.getContext(),d=gl.getExtension('WEBGL_debug_renderer_info');return d?String(gl.getParameter(d.UNMASKED_RENDERER_WEBGL)):'unbekannt';}catch(e){return 'unbekannt';}}
 const envFx={lf:1,gf:0};
 const GASC=new T.Color(0x5f6e44),tmpC=new T.Color();
 function tickEnv(S,dt,main,cam,now){
@@ -5479,8 +5514,11 @@ function loadSoldier(){
       try{
         SOLDIER.gltf=g;g.scene.updateMatrixWorld(true);
         const b=new T.Box3().setFromObject(g.scene);SOLDIER.height=Math.max(0.01,b.max.y-b.min.y);
-        for(let i=0;i<SLOTS;i++)SOLDIER.slots.push(makeSoldier('#ff3324',true));
-        SOLDIER.ready=true;
+        let i=0;const step=()=>{const n=Math.min(SLOTS,i+6);for(;i<n;i++)SOLDIER.slots.push(makeSoldier('#ff3324',true));
+          if(i<SLOTS){setTimeout(step,0);return;}
+          SOLDIER.ready=true;try{performance.mark('lb:soldier');}catch(e){}
+          if(curEnv)warm(curEnv,'sol');};
+        setTimeout(step,0);
       }catch(e){console.error(e);}
     },e=>console.error(e));
   }catch(e){console.error(e);}
@@ -5635,7 +5673,7 @@ function explosion(x,z,r,c){
 // o: {locals, pitch, fired, ads, sway, droneCfg, etypes, pcol, pkcol, hurt, hurtTint}
 let prevE=new Map(),prevS=null,dying=[];
 function render(S,now,dt,o){
-  if(!ready||!curEnv)return;
+  if(!ready||!curEnv||warming)return;
   if(menuG)menuG.visible=false;
   if(S!==prevS){prevS=S;prevE=new Map();dying=[];ptc=[];for(const sl of SOLDIER.slots){sl.id=null;sl.dying=-1;sl.holder.visible=false;sl.root.rotation.x=0;sl.root.position.y=0;}}
   shake=Math.max(0,shake-dt*30);
@@ -5867,7 +5905,7 @@ const ETSPD={grunt:62,runner:118,heavy:42,gunner:56,bomber:136,shield:46};
 const EBC1=new T.Color('#ffa040'),EBC2=new T.Color('#b07bff'),EBW=new T.Color('#5fd8ff');
 const BOSSK=et=>BOSSK.c||(BOSSK.c=Object.keys(et).filter(k=>et[k].boss));
 function renderMenu(now,ops){
-  if(!ready||!curEnv)return;
+  if(!ready||!curEnv||warming)return;
   if(curEnv!=='halle'&&envs.halle)useEnv('halle');
   if(envFx.lf<1||envFx.gf>0){envFx.lf=1;envFx.gf=0;tickEnv(null,0.016,null,null,now);}
   dust.visible=true;if(wpPool){wpPool.begin();wpPool.end();}
@@ -5919,7 +5957,7 @@ function setQuality(q){
   resize(VW,VH,window.devicePixelRatio||1);
 }
 const _resize=resize;
-return{init,setMap,resize:(w,h,d)=>_resize(w,h,Math.min(d||1,quality>1?1.75:quality>0?1.25:1)),render,renderMenu,project,setQuality,get ready(){return ready;},get views(){return views;},get stats(){return{decals:decals?decals.count:0,scorch:scorch?scorch.count:0,dying:dying.length,fire:firePool?firePool.live.length:0,smoke:smokePool?smokePool.live.length:0};}};
+return{init,setMap,prepare,isWarm,whenWarm:id=>warmT[id||curEnv]||Promise.resolve(),gpuName,resize:(w,h,d)=>_resize(w,h,Math.min(d||1,quality>1?1.75:quality>0?1.25:1)),render,renderMenu,project,setQuality,get ready(){return ready;},get views(){return views;},get stats(){return{decals:decals?decals.count:0,scorch:scorch?scorch.count:0,dying:dying.length,fire:firePool?firePool.live.length:0,smoke:smokePool?smokePool.live.length:0};}};
 })();
 
 </script>
@@ -6075,8 +6113,19 @@ function blocked(x,y){
 function lineFree(x1,y1,x2,y2){const n=Math.ceil(Math.hypot(x2-x1,y2-y1)/40);for(let i=1;i<n;i++){const t=i/n;if(blocked(x1+(x2-x1)*t,y1+(y2-y1)*t))return false;}return true;}
 
 // 3D-Grafik (Three.js); fällt ohne WebGL automatisch auf die 2D-Grafik zurück
-try{if(window.LB3D&&window.THREE&&window.LB3D.init(document.getElementById('gl')))R3=window.LB3D;}catch(e){R3=null;}
-if(!R3){const g=document.getElementById('gl');if(g)g.hidden=true;}
+// Die 3D-Grafik startet erst nach dem ersten Bild, damit das Menü sofort bedienbar ist
+let R3PENDING=true;
+function init3D(){
+  if(!R3PENDING)return;R3PENDING=false;
+  try{performance.mark('lb:3d-start');}catch(e){}
+  try{if(window.LB3D&&window.THREE&&window.LB3D.init(document.getElementById('gl')))R3=window.LB3D;}catch(e){R3=null;}
+  const g=document.getElementById('gl');
+  if(!R3){if(g)g.hidden=true;return;}
+  if(g)g.style.opacity='0';
+  resize();try{R3.setMap(MAP.id,ARENA,PROPS);}catch(e){console.error(e);}
+  try{performance.mark('lb:3d-ready');}catch(e){}
+  R3.whenWarm(MAP.id).then(()=>{try{performance.mark('lb:warm');}catch(e){}});
+}
 setWorld(MAPS[0]);
 addEventListener('resize',resize);resize();
 
@@ -7393,7 +7442,9 @@ function drawHurt(cx,cy,p,t){
   ctx.strokeStyle=`rgba(229,83,75,${Math.min(0.9,t*1.6)})`;ctx.lineWidth=7;ctx.beginPath();ctx.arc(cx,cy,92,rel-0.38,rel+0.38);ctx.stroke();
 }
 function draw(dt){
+  if(R3PENDING){ctx.clearRect(0,0,VW,VH);return;}
   if(!R3)return draw2D();
+  {const g=$('gl'),w=R3.isWarm(MAP.id)?'1':'0';if(g&&g.style.opacity!==w){g.style.opacity=w;if(w==='1'&&!START.first){START.first=performance.now();}}}
   const now=performance.now()/1000;
   ctx.setTransform(DPR,0,0,DPR,0,0);
   if(!S){R3.renderMenu(now,OPS);ctx.clearRect(0,0,VW,VH);return;}
@@ -7710,13 +7761,14 @@ document.querySelectorAll('[data-back]').forEach(b=>b.onclick=goBack);
 $('b_play').onclick=()=>{picks=[];showView('setup');if(mode==='online'&&!NET.role)netStatus('Einer erstellt einen Raum und schickt den Code, der andere tritt bei. Beide brauchen Internet.');};
 $('b_coll').onclick=()=>showView('coll');
 $('b_help').onclick=()=>showView('help');
+function prepMap(id){setTimeout(()=>{if(R3&&R3.prepare&&state==='menu'){const m=mapById(id);try{R3.prepare(m.id,m.arena,genProps(m));}catch(e){console.error(e);}}},60);}
 function renderMaps(){
-  const box=$('maps');if(!box)return;box.innerHTML='';
+  const box=$('maps');if(!box)return;box.innerHTML='';prepMap(selMap);
   const guest=mode==='online'&&NET.role==='guest';
   if(!mapAvail(mapById(selMap)))selMap='halle';
   for(const m of MAPS){if(!mapAvail(m))continue;const b=document.createElement('button');b.className='mapc'+(m.id==='halle'?'':' '+m.id)+(m.season?' event':'');b.setAttribute('aria-pressed',String(m.id===selMap));b.disabled=guest;
     b.innerHTML=`<span class="k">${m.name}</span><span class="d">${m.desc}</span><span class="r">Bosse: ${m.bosses.map(x=>ETYPES[x.type].name).join(' · ')}</span>${m.season?`<span class="ev">${SEASONS[m.season].name} · nur jetzt spielbar · eigene Beute</span>`:''}`;
-    b.onclick=()=>{selMap=m.id;try{localStorage.setItem('lastbreach.map',m.id);}catch(e){}renderMaps();const f=box.querySelector('[aria-pressed="true"]');f&&f.focus();};
+    b.onclick=()=>{selMap=m.id;try{localStorage.setItem('lastbreach.map',m.id);}catch(e){}renderMaps();const f=box.querySelector('[aria-pressed="true"]');f&&f.focus();prepMap(m.id);};
     box.appendChild(b);}
   const se=activeSeason();$('mapnote').textContent=guest?'Der Host wählt die Karte.':(se?`${SEASONS[se].name} aktiv: +20 % Erfahrung, Sonderkarte ${mapById(SEASONS[se].map).name}`:'');
 }
@@ -7822,11 +7874,15 @@ function openMenu(v){
   $('menu').hidden=false;showView(v||'main');
 }
 function startGame(bonuses,mapId,season){
+  init3D();
   newGame(bonuses,mapId,season);setTimeout(()=>presence(true),300);
   const mine=S.players[mode==='online'?myIdx():0];if(mine)collTab=mine.op.id;
   for(const id of ['menu','end','wait','lvup','pause'])$(id).hidden=true;
   LOOK.menu=false;$('lvup').classList.remove('live');
   $('pausebtn').hidden=false;state='play';NET.hostState='play';NET.lastSnap=performance.now();snapT=0;
+  // Karte noch nicht fertig vorbereitet: kurz warten statt ruckeln (höchstens 8 Sekunden)
+  if(R3&&!R3.isWarm(MAP.id)&&!isGuest()){state='loading';bannerTxt='KARTE WIRD VORBEREITET …';bannerT=30;const s0=S;
+    Promise.race([R3.whenWarm(MAP.id),new Promise(r=>setTimeout(r,8000))]).then(()=>{if(S===s0&&state==='loading'){state='play';bannerT=0;last=performance.now();}});}
   if(isGuest()){cam.x=S.players[1].x;cam.y=0;}
   bannerTxt=S.season?SEASONS[S.season].name.toUpperCase()+' · +20 % ERFAHRUNG':(coop()?'HALTET DIE STELLUNG':'HALTE DIE STELLUNG');bannerT=3.5;
   last=performance.now();wantLock();
@@ -8102,6 +8158,9 @@ setInterval(()=>{if(state==='menu'||state==='end')checkUpdate(false);},30*60*100
 renderUpdate();
 
 openMenu('main');
+const START={first:0};
+try{performance.mark('lb:menu');}catch(e){}
+requestAnimationFrame(()=>setTimeout(init3D,20));
 
 let last=performance.now(),snapT=0;
 function loop(now){
@@ -8116,7 +8175,8 @@ function loop(now){
       }
     }
     try{sfxTick(dt);}catch(e){console.error(e);}
-    if(FPSV.on){FPSV.n++;FPSV.acc+=dt;if(FPSV.acc>=0.5){$('fps').textContent=Math.round(FPSV.n/FPSV.acc)+' FPS';FPSV.n=0;FPSV.acc=0;}}
+    if(FPSV.on){FPSV.n++;FPSV.acc+=dt;if(FPSV.acc>=0.5){const mk=n=>{const e=performance.getEntriesByName(n)[0];return e?(e.startTime/1000).toFixed(1).replace('.',',')+' s':'–';};
+      $('fps').innerHTML=Math.round(FPSV.n/FPSV.acc)+' FPS<br><small>Start: Menü '+mk('lb:menu')+' · 3D '+mk('lb:3d-ready')+' · Grafik fertig '+mk('lb:warm')+'<br>'+esc(R3&&R3.gpuName?R3.gpuName().replace(/^ANGLE \(|\)$/g,'').slice(0,70):'2D-Modus')+'</small>';FPSV.n=0;FPSV.acc=0;}}
     draw(dt);hud();
   }catch(err){console.error(err);}
   requestAnimationFrame(loop);
