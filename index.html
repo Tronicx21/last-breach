@@ -101,7 +101,7 @@ p{color:var(--dim);line-height:1.55;max-width:62ch;margin:0 0 14px;font-size:13p
 .tabs .cnt{font:400 11px var(--mono);margin-left:6px;color:var(--dim)}
 .collgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-top:14px}
 .item{border:1px solid var(--line);background:var(--bg);padding:12px;display:flex;flex-direction:column;gap:5px;min-width:0}
-.item.r0{border-top:3px solid var(--dim)} .item.r1{border-top:3px solid var(--blue)} .item.r2{border-top:3px solid var(--hazard)}
+.item.r0{border-top:3px solid var(--dim)} .item.r1{border-top:3px solid var(--blue)} .item.r2{border-top:3px solid var(--hazard)} .item.r3{border-top:3px solid #e5534b;background:linear-gradient(160deg,#3a141433,transparent)} .item.r3 .rar{color:#ff7a6e} .eqs.r3{border-top:3px solid #e5534b}
 .item.locked{opacity:.55}
 .item .rar{font-size:10px;letter-spacing:.14em;text-transform:uppercase}
 .item.r0 .rar{color:var(--dim)} .item.r1 .rar{color:var(--blue)} .item.r2 .rar{color:var(--hazard)}
@@ -5976,7 +5976,9 @@ function seasonByDate(dt){const d=dt||new Date(),m=d.getMonth()+1,day=d.getDate(
   if((m===10&&day>=15)||(m===11&&day<=5))return 'halloween';
   const e=easterDay(d.getFullYear()),diff=(d-e)/86400000;if(diff>=-14&&diff<=8)return 'easter';return null;}
 let seasonMode='off';try{const v=localStorage.getItem(SEASONKEY);if(v==='auto'||SEASONS[v])seasonMode=v;}catch(e){}
-const activeSeason=()=>seasonMode==='auto'?seasonByDate():(SEASONS[seasonMode]?seasonMode:null);
+// Reihenfolge: lokales Admin-Event (nur dieses Gerät) > globales Event aus GitHub > automatisch nach Datum
+const GEV={season:null,msg:'',sha:null,status:'noch nicht geprüft',checked:0};
+const activeSeason=()=>SEASONS[seasonMode]?seasonMode:(GEV.season||(seasonMode==='auto'?seasonByDate():null));
 function setSeasonMode(v){seasonMode=v==='auto'||SEASONS[v]?v:'off';try{localStorage.setItem(SEASONKEY,seasonMode);}catch(e){}}
 const mapAvail=m=>!m.season||m.season===activeSeason();
 const mapById=id=>MAPS.find(m=>m.id===id)||MAPS[0];
@@ -6121,7 +6123,7 @@ const PASS={
 };
 
 /* ---------- Sammlung (bleibt über Runden hinweg gespeichert) ---------- */
-const RAR=['Gewöhnlich','Selten','Episch'];
+const RAR=['Gewöhnlich','Selten','Episch','Admin'];
 const COLL={
  brakke:[
   {id:'zuender',map:'halle',name:'Verstärkter Zünder',rar:0,b:{area:0.05}},
@@ -6148,6 +6150,10 @@ const COLL={
   {id:'karotte',map:'garten',ev:'easter',name:'Karotten-Zünder',rar:1,b:{charge:0.1,speed:0.02}},
   {id:'fruehlingskranz',map:'garten',ev:'easter',name:'Frühlingskranz',rar:2,b:{regen:0.5,magnet:0.1}},
   {id:'goldei',map:'garten',ev:'easter',name:'Goldenes Osterei',rar:2,b:{dmg:0.05,hp:12}},
+  {id:'adm_kern',map:'admin',admin:true,name:'Admin-Sprengkern',rar:3,b:{charge:0.4,area:0.2}},
+  {id:'adm_exo',map:'admin',admin:true,name:'Titan-Exoskelett',rar:3,b:{hp:80,regen:1.5}},
+  {id:'adm_badge',map:'admin',admin:true,name:'Kommando-Abzeichen',rar:3,b:{dmg:0.25,crit:0.1}},
+  {id:'adm_gurt',map:'admin',admin:true,name:'Unendlichkeits-Gurt',rar:3,b:{stam:80,speed:0.12}},
  ],
  sela:[
   {id:'rotor',map:'halle',name:'Leichtbau-Rotor',rar:0,b:{speed:0.04}},
@@ -6174,6 +6180,10 @@ const COLL={
   {id:'pollen',map:'garten',ev:'easter',name:'Blütenpollen-Firmware',rar:1,b:{drone:0.12}},
   {id:'grashuepfer',map:'garten',ev:'easter',name:'Grashüpfer-Sohle',rar:2,b:{stam:20,speed:0.04}},
   {id:'regenbogenei',map:'garten',ev:'easter',name:'Regenbogen-Ei',rar:2,b:{dmg:0.04,crit:0.02}},
+  {id:'adm_kern',map:'admin',admin:true,name:'Admin-Schwarmkern',rar:3,b:{drone:0.4,cd:0.1}},
+  {id:'adm_rotor',map:'admin',admin:true,name:'Quanten-Rotor',rar:3,b:{speed:0.18,stam:60}},
+  {id:'adm_auge',map:'admin',admin:true,name:'Allsehendes Auge',rar:3,b:{crit:0.15,magnet:0.5}},
+  {id:'adm_badge',map:'admin',admin:true,name:'Kommando-Abzeichen',rar:3,b:{dmg:0.25,crit:0.1}},
  ],
  toivo:[
   {id:'lauf',map:'halle',name:'Match-Lauf',rar:0,b:{dmg:0.04}},
@@ -6200,6 +6210,10 @@ const COLL={
   {id:'fruehlingsokular',map:'garten',ev:'easter',name:'Frühlings-Okular',rar:1,b:{crit:0.025,dmg:0.01}},
   {id:'weidenkorb',map:'garten',ev:'easter',name:'Weidenkorb-Magazin',rar:2,b:{cd:0.05}},
   {id:'kristallei',map:'garten',ev:'easter',name:'Kristall-Ei-Abzeichen',rar:2,b:{dmg:0.05,regen:0.3}},
+  {id:'adm_kal',map:'admin',admin:true,name:'Admin-Kaliber',rar:3,b:{rifle:0.4,dmg:0.2}},
+  {id:'adm_scope',map:'admin',admin:true,name:'Zeitlupen-Zielfernrohr',rar:3,b:{crit:0.15,cd:0.1}},
+  {id:'adm_exo',map:'admin',admin:true,name:'Titan-Exoskelett',rar:3,b:{hp:80,regen:1.5}},
+  {id:'adm_badge',map:'admin',admin:true,name:'Kommando-Abzeichen',rar:3,b:{dmg:0.25,crit:0.1}},
  ],
 };
 const pctS=v=>String(Math.round(v*1000)/10).replace('.',',');
@@ -6281,14 +6295,15 @@ const maxBonus=op=>{if(!COLL[op])return {};const b=sumB(op,()=>3);for(const k of
 function clampBonus(op,b){const mx=maxBonus(op),out={};if(!b||typeof b!=='object')return out;
   for(const k in mx){const v=Number(b[k]);if(isFinite(v)&&v>0)out[k]=Math.min(mx[k],v);}return out;}
 const bonusText=b=>Object.keys(b).filter(k=>BLABEL[k]&&b[k]>0).map(k=>BLABEL[k](b[k]));
-function collCount(op){let n=0;for(const it of COLL[op])n+=stars(op,it.id);return n;}
+function collCount(op){let n=0;for(const it of COLL[op])if(!it.admin)n+=stars(op,it.id);return n;}
+const pubItems=op=>COLL[op].filter(i=>!i.admin);
 function rollLoot(op,tier,mapId){
   const C=loadColl();if(!COLL[op])return null;
   const own=C[op]||(C[op]={}),mid=mapId||MAP.id;
   const W=[[70,25,5],[50,35,15],[35,40,25]][Math.max(0,Math.min(2,tier-1))];
   const r=Math.random()*100,rar=r<W[0]?0:r<W[0]+W[1]?1:2;
   const se=S&&S.season,evMap=mapById(mid).season;
-  const open=COLL[op].filter(i=>(own[i.id]||0)<3&&(!i.ev||i.ev===se||i.map===mid));
+  const open=COLL[op].filter(i=>!i.admin&&(own[i.id]||0)<3&&(!i.ev||i.ev===se||i.map===mid));
   // auf der Event-Karte nur Event-Teile; auf normalen Karten während eines Events 25 % Chance auf ein Event-Teil
   let src=mid;if(!evMap&&se&&Math.random()<0.25&&open.some(i=>i.ev===se))src=SEASONS[se].map;
   let pool=open.filter(i=>i.map===src&&i.rar===rar);
@@ -7519,17 +7534,24 @@ function renderAdmin(){
   }else if(adminTab==='coll'){
     h+='<h3>Sammlung auf diesem Gerät bearbeiten</h3><div class="abtns">'+OPS.map(o=>`<button data-act="collop" data-id="${o.id}" aria-pressed="${o.id===adminCollOp}">${o.name} <small>${collCount(o.id)}/${COLL[o.id].length*3}</small></button>`).join('')+'</div>';
     {const L=opLevel(adminCollOp);h+=`<div class="arow"><span>Operator-Level ${L.lvl} <small>${L.cur}/${L.need} EP · ${freePts(adminCollOp)} Punkte frei</small></span><div class="abtns"><button data-act="oplv">+1 Level</button><button data-act="oplv10">+10 Level</button><button data-act="oplvreset">Level zurücksetzen</button></div></div>`;}
-    for(const it of COLL[adminCollOp]){const st=stars(adminCollOp,it.id);
-      h+=`<div class="arow"><span>${esc(it.name)} <small>${RAR[it.rar]} · ${mapById(it.map).name}</small></span><div class="lvl"><button data-act="st-" data-id="${it.id}" ${st<=0?'disabled':''} aria-label="Stern entfernen">−</button><b class="stars">${'★'.repeat(st)}${'☆'.repeat(3-st)}</b><button data-act="st+" data-id="${it.id}" ${st>=3?'disabled':''} aria-label="Stern hinzufügen">+</button></div></div>`;}
-    h+=`<div class="abtns"><button data-act="collmax">Alle Teile von ${opById(adminCollOp).name} auf 3 Sterne</button><button data-act="collreset" class="danger">${adminResetArm?'Wirklich alles zurücksetzen?':'Gesamte Sammlung zurücksetzen'}</button></div>`;
+    for(const it of [...COLL[adminCollOp]].sort((a,b)=>(b.admin?1:0)-(a.admin?1:0))){const st=stars(adminCollOp,it.id);
+      h+=`<div class="arow"><span>${it.admin?'<b class="up">★</b> ':''}${esc(it.name)} <small>${RAR[it.rar]} · ${it.admin?'nur Admin, für andere unsichtbar':mapById(it.map).name}</small></span><div class="lvl"><button data-act="st-" data-id="${it.id}" ${st<=0?'disabled':''} aria-label="Stern entfernen">−</button><b class="stars">${'★'.repeat(st)}${'☆'.repeat(3-st)}</b><button data-act="st+" data-id="${it.id}" ${st>=3?'disabled':''} aria-label="Stern hinzufügen">+</button></div></div>`;}
+    h+=`<div class="abtns"><button data-act="collmax">Alle normalen Teile von ${opById(adminCollOp).name} auf 3 Sterne</button><button data-act="admmax">Alle Admin-Teile geben</button><button data-act="collreset" class="danger">${adminResetArm?'Wirklich alles zurücksetzen?':'Gesamte Sammlung zurücksetzen'}</button></div>`;
     if(S)h+='<p class="note">Geänderte Sammlungsboni wirken ab dem nächsten Einsatz.</p>';
   }else if(adminTab==='season'){
-    const se=activeSeason(),auto=seasonByDate();
-    h+='<h3>Globales Saison-Event</h3><div class="abtns">'+[['off','Aus'],['auto','Automatisch nach Datum'],...Object.keys(SEASONS).map(k=>[k,SEASONS[k].short])].map(([k,l])=>`<button data-act="season" data-id="${k}" aria-pressed="${seasonMode===k}">${esc(l)}</button>`).join('')+'</div>';
-    h+=`<p class="note">${se?`Aktiv: <b>${SEASONS[se].name}</b>. Alle Einsätze geben 20 % mehr Erfahrung (im Einsatz und fürs Operator-Level), die Sonderkarte <b>${mapById(SEASONS[se].map).name}</b> ist spielbar und ihre Bosse lassen Event-Ausrüstung fallen, die es nur während des Events gibt. Auf normalen Karten ist jede vierte Beutekiste ein Event-Teil.`:'Kein Event aktiv.'}</p>`;
-    h+=`<p class="note">Automatisch: Halloween 15.10.–5.11., Weihnachten 1.12.–6.1., Ostern rund um Ostersonntag. Heute wäre das: ${auto?SEASONS[auto].short:'kein Event'}. Das Event gilt für dieses Gerät; im Online-Koop überträgt der Host sein Event an den Mitspieler.</p>`;
-    if(S)h+='<p class="note">Die Änderung wirkt ab dem nächsten Einsatz.</p>';
-    h+='<h3>Event-Karten</h3>'+Object.keys(SEASONS).map(k=>{const m=mapById(SEASONS[k].map);return `<div class="arow"><span>${esc(m.name)} <small>${SEASONS[k].short} · Bosse: ${m.bosses.map(b=>esc(ETYPES[b.type].name)).join(', ')}</small></span></div>`;}).join('');
+    const se=activeSeason(),auto=seasonByDate(),repo=repoName();
+    h+=`<h3>Globales Event · für alle Spieler</h3><p class="note">Status: <b>${esc(GEV.status)}</b>${GEV.msg?' · Nachricht: „'+esc(GEV.msg)+'“':''}. Alle Spiele prüfen das beim Start und alle 5 Minuten im Menü.</p>`;
+    if(repo){
+      h+=`<form id="gevform" class="pwform"><label for="gevmsg">Nachricht für alle (optional, erscheint im Hauptmenü)</label><input id="gevmsg" class="pw wide" maxlength="160" placeholder="z. B. Frohe Weihnachten! Doppelt so viele Geschenke im Winterdorf." value="${esc(GEV.msg||'')}"></form>`;
+      h+='<div class="abtns">'+[['','Aus'],...Object.keys(SEASONS).map(k=>[k,SEASONS[k].short])].map(([k,l])=>`<button data-act="gev" data-id="${k}" aria-pressed="${(GEV.season||'')===k}">Global: ${esc(l)}</button>`).join('')+'<button data-act="gevcheck">Jetzt prüfen</button></div>';
+      h+=DCFG.ghToken?'<p class="note">GitHub-Token ist auf diesem PC hinterlegt: Ein Klick schaltet das Event sofort für alle.</p>'
+        :`<p class="note">Ohne GitHub-Token öffnet ein Klick die Datei events.json bei GitHub und kopiert den neuen Inhalt in die Zwischenablage: Dort alles markieren, einfügen (Strg+V) und „Commit changes“ klicken. Mit Token geht es mit einem Klick (siehe unten).</p>`;
+      h+=`<form id="tokform" class="pwform"><label for="ghtok">GitHub-Token (bleibt nur auf diesem PC, wird nie mitgeliefert)</label><input id="ghtok" class="pw wide" type="password" autocomplete="off" placeholder="${DCFG.ghToken?'gespeichert – zum Ändern neu eintragen':'github_pat_…'}"><div class="abtns"><button type="submit">Token speichern</button>${DCFG.ghToken?'<button type="button" data-act="tokdel">Token löschen</button>':''}<button type="button" data-act="toknew">Token bei GitHub erstellen</button></div></form>`;
+      h+='<p class="note">Token erstellen: Fine-grained token, „Only select repositories“ → last-breach, Berechtigung „Contents: Read and write“. Wer den Token hat, kann Events umschalten – gib ihn niemandem weiter.</p>';
+    }else h+='<p class="note">Kein GitHub-Repository eingebaut.</p>';
+    h+='<h3>Lokales Event · nur auf diesem Gerät (zum Testen)</h3><div class="abtns">'+[['off','Aus (globales Event gilt)'],['auto','Automatisch nach Datum'],...Object.keys(SEASONS).map(k=>[k,SEASONS[k].short])].map(([k,l])=>`<button data-act="season" data-id="${k}" aria-pressed="${seasonMode===k}">${esc(l)}</button>`).join('')+'</div>';
+    h+=`<p class="note">${se?`Gerade aktiv auf diesem Gerät: <b>${SEASONS[se].name}</b> (+20 % Erfahrung, Sonderkarte ${mapById(SEASONS[se].map).name}, Event-Beute).`:'Auf diesem Gerät ist gerade kein Event aktiv.'} Automatisch nach Datum wäre heute: ${auto?SEASONS[auto].short:'kein Event'}.</p>`;
+    if(S)h+='<p class="note">Änderungen wirken ab dem nächsten Einsatz.</p>';
   }else if(adminTab==='desk'){
     h+=`<h3>Updates · Version ${esc(GAME_VERSION)}</h3><form id="updform" class="pwform"><label for="updurl">Update-Quelle (Adresse deiner version.json)</label><input id="updurl" class="pw wide" autocomplete="off" spellcheck="false" placeholder="https://DEINNAME.github.io/last-breach/version.json" value="${esc(DCFG.updateUrl||baked(BAKED.updateUrl))}"><div class="abtns"><button type="submit">Speichern &amp; jetzt prüfen</button></div></form>`;
     h+=`<p class="note">${esc(UPD.status||'Noch nicht geprüft.')}</p>`;
@@ -7544,6 +7566,10 @@ function renderAdmin(){
   }
   h+=`</div><div class="status" id="adminmsg">${esc(adminMsg)}</div>`;
   B.innerHTML=h;
+  const tf=$('tokform');if(tf)tf.onsubmit=e=>{e.preventDefault();const v=$('ghtok').value.trim();
+    if(!/^(github_pat_|ghp_)[A-Za-z0-9_]{20,}$/.test(v)){adminMsg='Das sieht nicht wie ein GitHub-Token aus (beginnt mit github_pat_ oder ghp_).';renderAdmin();return;}
+    DCFG.ghToken=v;saveDcfg();adminMsg='Token gespeichert (nur auf diesem PC).';renderAdmin();};
+  const gf=$('gevform');if(gf)gf.onsubmit=e=>e.preventDefault();
   const uf=$('updform');if(uf)uf.onsubmit=async e=>{e.preventDefault();const v=$('updurl').value.trim();
     if(v&&!/^https:\/\/[^\s]+$/.test(v)){adminMsg='Die Adresse muss mit https:// beginnen.';renderAdmin();return;}
     DCFG.updateUrl=v===baked(BAKED.updateUrl)?'':v;saveDcfg();adminMsg='Prüfe …';renderAdmin();adminMsg=await checkUpdate(true);if(adminOpen)renderAdmin();};
@@ -7588,9 +7614,16 @@ $('adminbody').addEventListener('click',e=>{
   else if(act==='collop'){adminCollOp=id;}
   else if(act==='dctoggle'){DCFG.discordOff=!DCFG.discordOff;saveDcfg();presence(true);adminMsg='Discord-Status '+(DCFG.discordOff?'aus':'an');}
   else if(act==='updreset'&&DESK){DESK.resetUpdate().then(()=>{adminMsg='Update entfernt. Beim nächsten Start läuft die Grundversion.';renderAdmin();});return;}
+  else if(act==='gev'){const se=SEASONS[id]?id:null,msg=($('gevmsg')&&$('gevmsg').value.trim())||'';adminMsg='Schalte global um …';renderAdmin();
+    setGlobalSeason(se,se?msg:'').then(r=>{adminMsg=r==='manual'?'GitHub-Seite geöffnet, neuer Inhalt ist in der Zwischenablage: alles markieren, Strg+V, „Commit changes“.':(se?SEASONS[se].name+' ist jetzt für alle Spieler aktiv.':'Globales Event ausgeschaltet.');if(state==='menu'&&view==='main')renderMain();if(adminOpen)renderAdmin();})
+      .catch(err=>{adminMsg='Fehler: '+(err&&err.message||err);if(adminOpen)renderAdmin();});return;}
+  else if(act==='gevcheck'){adminMsg='Prüfe …';renderAdmin();checkGlobal().then(()=>{adminMsg=GEV.status;if(adminOpen)renderAdmin();});return;}
+  else if(act==='tokdel'){DCFG.ghToken='';saveDcfg();adminMsg='Token gelöscht.';}
+  else if(act==='toknew'){const u='https://github.com/settings/personal-access-tokens/new';if(DESK)DESK.openExternal(u);else window.open(u,'_blank','noopener');adminMsg='GitHub geöffnet.';}
   else if(act==='season'){setSeasonMode(id);const se=activeSeason();adminMsg=se?SEASONS[se].name+' aktiv':'Kein Saison-Event aktiv';}
   else if(act==='st+'||act==='st-'){const C2=loadColl(),own=C2[adminCollOp]||(C2[adminCollOp]={});const n=Math.max(0,Math.min(3,(own[id]||0)+(act==='st+'?1:-1)));if(n)own[id]=n;else delete own[id];saveColl();}
-  else if(act==='collmax'){const C2=loadColl(),own=C2[adminCollOp]||(C2[adminCollOp]={});for(const it of COLL[adminCollOp])own[it.id]=3;saveColl();adminMsg='Alle Teile auf 3 Sterne';}
+  else if(act==='collmax'){const C2=loadColl(),own=C2[adminCollOp]||(C2[adminCollOp]={});for(const it of pubItems(adminCollOp))own[it.id]=3;saveColl();adminMsg='Alle normalen Teile auf 3 Sterne';}
+  else if(act==='admmax'){const C2=loadColl(),own=C2[adminCollOp]||(C2[adminCollOp]={});for(const it of COLL[adminCollOp])if(it.admin)own[it.id]=3;saveColl();adminMsg='Admin-Teile vergeben (in der Sammlung ausrüsten)';}
   else if(act==='collreset'){if(!adminResetArm){adminResetArm=true;}else{const C2=loadColl();for(const op in COLL)C2[op]={};saveColl();const E=loadEq();for(const op in COLL)E[op]=null;saveEq();adminResetArm=false;adminMsg='Sammlung zurückgesetzt';}}
   buildHud();renderAdmin();
 });
@@ -7690,11 +7723,11 @@ function renderMaps(){
 
 function renderMain(){
   let tot=0,max=0;const parts=[];
-  for(const op of OPS){const n=collCount(op.id),m=COLL[op.id].length*3,L=opLevel(op.id),fp=freePts(op.id);tot+=n;max+=m;
+  for(const op of OPS){const n=collCount(op.id),m=pubItems(op.id).length*3,L=opLevel(op.id),fp=freePts(op.id);tot+=n;max+=m;
     parts.push(`<div><div class="tag">${op.name}</div><div class="val">Lv ${L.lvl} <span class="tag">· ${n}/${m} ★${fp?` · <span class="up">${fp} Punkt${fp>1?'e':''} frei</span>`:''}</span></div></div>`);}
   $('b_collcnt').textContent=`${tot} / ${max} ★`;
   const se=activeSeason(),sb=$('seasonbar');
-  if(sb){sb.hidden=!se;if(se){const S2=SEASONS[se];sb.style.setProperty('--sc',S2.col);sb.innerHTML=`<b>${S2.name.toUpperCase()} AKTIV</b><span>+20 % Erfahrung · Sonderkarte ${mapById(S2.map).name} · Event-Ausrüstung, die es nur jetzt gibt</span>`;}}
+  if(sb){sb.hidden=!se;if(se){const S2=SEASONS[se],glob=!SEASONS[seasonMode]&&GEV.season===se;sb.style.setProperty('--sc',S2.col);sb.innerHTML=`<b>${S2.name.toUpperCase()} AKTIV${glob?' · FÜR ALLE SPIELER':''}</b>${glob&&GEV.msg?`<span><b style="font:inherit;color:inherit;letter-spacing:0">${esc(GEV.msg)}</b></span>`:''}<span>+20 % Erfahrung · Sonderkarte ${mapById(S2.map).name} · Event-Ausrüstung, die es nur jetzt gibt</span>`;}}
   document.body.dataset.season=se||'';
   $('progress').innerHTML=parts.join('');
 }
@@ -7725,6 +7758,12 @@ function renderColl(){
         <span class="tx">${st?bonusText(per).join('<br>'):(m.season?'Nur im '+SEASONS[m.season].name+' erhältlich: Hauptbosse auf '+m.name+'.':'Noch nicht gefunden. Fundort: Hauptbosse auf '+m.name+'.')}</span>
         ${st?`<button class="eqb" data-act="${on?'uneq':'eq'}" data-id="${it.id}" ${!on&&eq.length>=EQN?'disabled title="Alle 4 Plätze belegt"':''}>${on?'Ablegen':'Ausrüsten'}</button>`:''}</div>`;}
     h+='</div>';}
+  {const own=COLL[op].filter(i=>i.admin&&stars(op,i.id)>0);
+    if(own.length){h+=`<h3>★ Admin-Ausrüstung <small class="tag">nur über das Admin-Menü erhältlich</small></h3><div class="collgrid">`;
+      for(const it of own){const st=stars(op,it.id),on=eq.includes(it.id);const per={};for(const k in it.b)per[k]=it.b[k]*st;
+        h+=`<div class="item r3${on?' on':''}"><span class="rar">Admin${on?' · ausgerüstet':''}</span><span class="nm">${esc(it.name)}</span><span class="st">${'★'.repeat(st)}${'☆'.repeat(3-st)}</span><span class="tx">${bonusText(per).join('<br>')}</span>
+          <button class="eqb" data-act="${on?'uneq':'eq'}" data-id="${it.id}" ${!on&&eq.length>=EQN?'disabled title="Alle 4 Plätze belegt"':''}>${on?'Ablegen':'Ausrüsten'}</button></div>`;}
+      h+='</div>';}}
   $('collbody').innerHTML=h;
   const b=bonusText(collBonus(op));
   $('collsum').innerHTML=b.length?`Aktive Boni für ${opById(op).name} (Level + Ausrüstung): ${b.join(' · ')}`:`${opById(op).name} hat noch keine Boni. Spiele Einsätze für Erfahrung und besiege Hauptbosse für Ausrüstung.`;
@@ -7796,7 +7835,7 @@ function startGame(bonuses,mapId,season){
 if(/lbtest/.test(location.href))window.__lb={get S(){return S;},get state(){return state;},get NET(){return NET;},spawnElite:()=>spawnElite(),hurt:(e,d)=>hurt(e,d),loadColl,rollLoot,collBonus,
   resetColl:()=>{collMem={};for(const op in COLL)collMem[op]={};saveColl();},sha256,get PROPS(){return PROPS;},LOOK,blocked,
   spawnType:t=>spawn(t),triggerEvent,setWorld,MAPS,mapById,get MAP(){return MAP;},GUNS,dropGun,takeGun,opLevel,addOpXp,freePts,addSkill,collBonus,equipped,setEquip,EVSET,
-  get selMap(){return selMap;},set selMap(v){selMap=v;},get SND(){return SND;},get SFX(){return SFX;},checkUpdate,get UPD(){return UPD;},get DCFG(){return DCFG;},presence,get PRES(){return PRES;},get GAME_VERSION(){return GAME_VERSION;},setSeasonMode,activeSeason,seasonByDate,SEASONS,rollLoot};
+  get selMap(){return selMap;},set selMap(v){selMap=v;},get GEV(){return GEV;},checkGlobal,get SND(){return SND;},get SFX(){return SFX;},checkUpdate,get UPD(){return UPD;},get DCFG(){return DCFG;},presence,get PRES(){return PRES;},get GAME_VERSION(){return GAME_VERSION;},setSeasonMode,activeSeason,seasonByDate,SEASONS,rollLoot};
 
 /* ---------- Sound: alles wird live erzeugt (Web Audio), jede Waffe klingt anders ---------- */
 const SND={ctx:null,master:null,rev:null,noise:null,vol:0.8,muted:false,last:{},amb:null,ambId:'',prev:null,ownShot:false,stepT:0};
@@ -7944,11 +7983,11 @@ function sfxTick(dt){
 const FPSV={on:false,n:0,acc:0};try{FPSV.on=localStorage.getItem('lastbreach.fps')==='1';}catch(e){}$('fps').hidden=!FPSV.on;
 $('vol').value=String(Math.round(SND.vol*100));$('vol').addEventListener('input',()=>{setVol(Number($('vol').value)/100);if(SND.muted)toggleMute();SFX.hit(false);});
 /* ---------- Version, Updates und Discord ---------- */
-const GAME_VERSION='1.5.1';
+const GAME_VERSION='1.6.0';
 const DESK=window.lbDesktop||null;
-const BAKED={updateUrl:'https://tronicx21.github.io/last-breach/version.json',discordId:'1569055355495780492'};
+const BAKED={updateUrl:'https://tronicx21.github.io/last-breach/version.json',discordId:'1569055355495780492',repo:'Tronicx21/last-breach'};
 const DESKKEY='lastbreach.desktop.v1';
-const DCFG=(()=>{let d={};try{d=JSON.parse(localStorage.getItem(DESKKEY)||'{}')||{};}catch(e){d={};}return{updateUrl:typeof d.updateUrl==='string'?d.updateUrl:'',discordId:typeof d.discordId==='string'?d.discordId:'',discordOff:!!d.discordOff,skip:typeof d.skip==='string'?d.skip:''};})();
+const DCFG=(()=>{let d={};try{d=JSON.parse(localStorage.getItem(DESKKEY)||'{}')||{};}catch(e){d={};}return{updateUrl:typeof d.updateUrl==='string'?d.updateUrl:'',discordId:typeof d.discordId==='string'?d.discordId:'',discordOff:!!d.discordOff,skip:typeof d.skip==='string'?d.skip:'',ghToken:typeof d.ghToken==='string'?d.ghToken:''};})();
 function saveDcfg(){try{localStorage.setItem(DESKKEY,JSON.stringify(DCFG));}catch(e){}}
 const baked=v=>/^__LB_/.test(v)?'':v;
 const updUrl=()=>DCFG.updateUrl||baked(BAKED.updateUrl);
@@ -8023,6 +8062,41 @@ function presence(force){
 }
 if(DESK){DESK.info().then(i=>{UPD.app=i;renderUpdate();}).catch(()=>{});setInterval(()=>presence(false),5000);}
 setTimeout(()=>presence(true),1200);
+// Globale Events: Datei events.json im GitHub-Repository, alle 5 Minuten im Menü geprüft
+const repoName=()=>{const r=baked(BAKED.repo);return /^[\w.-]+\/[\w.-]+$/.test(r)?r:'';};
+function b64utf8(s){const bin=atob(String(s).replace(/\s/g,''));const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new TextDecoder().decode(u);}
+function utf8b64(s){const u=new TextEncoder().encode(s);let bin='';for(const c of u)bin+=String.fromCharCode(c);return btoa(bin);}
+async function checkGlobal(){
+  const repo=repoName();if(!repo){GEV.status='kein Repository eingestellt';return;}
+  const url=`https://api.github.com/repos/${repo}/contents/events.json?ref=main`;
+  try{
+    let j;if(DESK)j=await DESK.fetchJson(url);else{const r=await fetch(url+'&t='+Date.now(),{cache:'no-store'});if(r.status===404){GEV.season=null;GEV.msg='';GEV.status='keine events.json';return;}if(!r.ok)throw new Error('HTTP '+r.status);j=await r.json();}
+    const d=JSON.parse(b64utf8(j.content||''));
+    GEV.season=SEASONS[d.season]?d.season:null;GEV.msg=typeof d.message==='string'?d.message.slice(0,160):'';GEV.sha=j.sha||null;GEV.checked=Date.now();
+    GEV.status=GEV.season?SEASONS[GEV.season].name+' ist global aktiv':'kein globales Event aktiv';
+  }catch(e){if(/HTTP 404/.test(String(e&&e.message))){GEV.season=null;GEV.msg='';GEV.status='keine events.json';}else GEV.status='Prüfung fehlgeschlagen: '+String(e&&e.message||e).replace(/^Error invoking remote method '[^']+': (Error: )?/,'').slice(0,80);}
+  if(state==='menu'){if(view==='main')renderMain();if(view==='setup')renderMaps();}
+  if(adminOpen&&adminTab==='season')renderAdmin();
+}
+async function setGlobalSeason(se,msg){
+  const repo=repoName();if(!repo)throw new Error('Kein Repository eingestellt');
+  const body=JSON.stringify({season:se||null,message:msg||''},null,2)+'\n';
+  const tok=DCFG.ghToken;
+  if(!tok){ // ohne Token: Inhalt kopieren und die Bearbeiten-Seite öffnen
+    try{await navigator.clipboard.writeText(body);}catch(e){}
+    const u=`https://github.com/${repo}/edit/main/events.json`;if(DESK)DESK.openExternal(u);else window.open(u,'_blank','noopener');
+    return 'manual';
+  }
+  const api=`https://api.github.com/repos/${repo}/contents/events.json`,H={Authorization:'Bearer '+tok,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
+  let sha=null;const g=await fetch(api+'?ref=main&t='+Date.now(),{headers:H,cache:'no-store'});if(g.ok)sha=(await g.json()).sha;else if(g.status!==404)throw new Error(g.status===401?'Token ungültig oder abgelaufen':g.status===403||g.status===404?'Token hat keinen Zugriff auf das Repository':'GitHub antwortet mit '+g.status);
+  const put={message:'Globales Event: '+(se?SEASONS[se].name:'aus'),content:utf8b64(body),branch:'main'};if(sha)put.sha=sha;
+  const r=await fetch(api,{method:'PUT',headers:{...H,'Content-Type':'application/json'},body:JSON.stringify(put)});
+  if(!r.ok)throw new Error(r.status===401?'Token ungültig oder abgelaufen':r.status===403||r.status===404?'Token darf das Repository nicht ändern (Contents: Read and write nötig)':'GitHub antwortet mit '+r.status);
+  GEV.season=se||null;GEV.msg=msg||'';GEV.checked=Date.now();GEV.status=se?SEASONS[se].name+' ist global aktiv':'kein globales Event aktiv';
+  return 'ok';
+}
+setTimeout(checkGlobal,2000);
+setInterval(()=>{if(state==='menu'||state==='end')checkGlobal();},5*60*1000);
 setTimeout(()=>{checkUpdate(false).then(()=>presence(true));},1500);
 setInterval(()=>{if(state==='menu'||state==='end')checkUpdate(false);},30*60*1000);
 renderUpdate();
