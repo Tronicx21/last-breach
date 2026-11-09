@@ -185,7 +185,13 @@ html[lang=en] .notesbtn.fresh::after{content:'NEW'}html[lang=es] .notesbtn.fresh
 .locks button:focus-visible{outline:2px solid var(--hazard)}
 .asave{margin:0 0 12px}
 .asave button[aria-pressed="true"]{background:var(--hazard);color:#111}
-.alogin{max-width:420px}
+.alogin{max-width:460px}
+.admwrap.one{grid-template-columns:1fr}
+.vcols{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:8px}
+.vcol{border:1px solid var(--line);background:var(--bg);padding:10px 12px;min-width:0}
+.vcol .vbig{display:block;font:700 26px var(--display);color:var(--hazard);margin:2px 0 4px}
+.vcol ul{margin:0;padding-left:16px;font-size:12px;color:var(--fg);line-height:1.5}
+.vcol .note{word-break:break-all}
 @media (max-width:760px){.admwrap{grid-template-columns:1fr}.admnav{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;position:static}.admnav .agl{display:none}.admnav button{flex:0 0 auto;border-left:0;border-bottom:3px solid transparent}.admnav button[aria-selected="true"]{border-bottom-color:var(--hazard)}}
 .adm h3{margin-top:16px}
 .arow{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid #2c3a3f80}
@@ -6897,7 +6903,9 @@ const I18D_UI={
 "Bilder pro Sekunde einblenden.":["Show frames per second.", "Mostrar fotogramas por segundo.", "Afficher les images par seconde.", "Saniyedeki kare sayısını göster."],
 "(Windows-App): Vollbild.":["(Windows app): fullscreen.", "(aplicación de Windows): pantalla completa.", "(application Windows) : plein écran.", "(Windows uygulaması): tam ekran."],
 "Gamepad:":["Gamepad:", "Mando:", "Manette :", "Gamepad:"],
-"linker Stick laufen, rechter Stick zielen, rechter Trigger schießen, linker Trigger zielen, A springen, B sprinten, X Waffe aufheben, Y nachladen, Start Pause.":["left stick move, right stick aim, right trigger shoot, left trigger aim down sights, A jump, B sprint, X pick up weapon, Y reload, Start pause.", "stick izquierdo moverse, stick derecho apuntar, gatillo derecho disparar, gatillo izquierdo apuntar, A saltar, B esprintar, X recoger arma, Y recargar, Start pausa.", "stick gauche se déplacer, stick droit viser, gâchette droite tirer, gâchette gauche viser, A sauter, B sprinter, X ramasser une arme, Y recharger, Start pause.", "sol çubuk hareket, sağ çubuk nişan, sağ tetik ateş, sol tetik nişan al, A zıpla, B koş, X silah al, Y şarjör değiştir, Start duraklat."]
+"linker Stick laufen, rechter Stick zielen, rechter Trigger schießen, linker Trigger zielen, A springen, B sprinten, X Waffe aufheben, Y nachladen, Start Pause.":["left stick move, right stick aim, right trigger shoot, left trigger aim down sights, A jump, B sprint, X pick up weapon, Y reload, Start pause.", "stick izquierdo moverse, stick derecho apuntar, gatillo derecho disparar, gatillo izquierdo apuntar, A saltar, B esprintar, X recoger arma, Y recargar, Start pausa.", "stick gauche se déplacer, stick droit viser, gâchette droite tirer, gâchette gauche viser, A sauter, B sprinter, X ramasser une arme, Y recharger, Start pause.", "sol çubuk hareket, sağ çubuk nişan, sağ tetik ateş, sol tetik nişan al, A zıpla, B koş, X silah al, Y şarjör değiştir, Start duraklat."],
+"BETA-UPDATE VERFÜGBAR":["BETA UPDATE AVAILABLE", "ACTUALIZACIÓN BETA DISPONIBLE", "MISE À JOUR BÊTA DISPONIBLE", "BETA GÜNCELLEMESİ MEVCUT"],
+"Kleinere Verbesserungen":["Minor improvements", "Mejoras menores", "Améliorations mineures", "Küçük iyileştirmeler"]
 };
 
 // Ausrüstungsteile: deutscher Name → [English, Español, Français, Türkçe]
@@ -7012,10 +7020,13 @@ function seasonByDate(dt){const d=dt||new Date(),m=d.getMonth()+1,day=d.getDate(
   const e=easterDay(d.getFullYear()),diff=(d-e)/86400000;if(diff>=-14&&diff<=8)return 'easter';return null;}
 let seasonMode='off';try{const v=localStorage.getItem(SEASONKEY);if(v==='auto'||SEASONS[v])seasonMode=v;}catch(e){}
 // Reihenfolge: lokales Admin-Event (nur dieses Gerät) > globales Event aus GitHub > automatisch nach Datum
-const GEV={season:null,msg:'',wb:null,locked:[],sha:null,status:'noch nicht geprüft',checked:0};
+const GEV={season:null,msg:'',wb:null,locked:[],tester:'',sha:null,status:'noch nicht geprüft',checked:0};
 // Global gesperrte Inhalte (Admin, events.json): look:<id>, gun:<id>, skin:<1-5>, item:<id>
-const cleanLocked=a=>Array.isArray(a)?[...new Set(a.filter(x=>typeof x==='string'&&/^(look|gun|skin|item):[a-z0-9_]{1,24}$/.test(x)))].slice(0,120):[];
+const cleanLocked=a=>Array.isArray(a)?[...new Set(a.filter(x=>typeof x==='string'&&/^(look|gun|skin|item|tab):[a-z0-9_]{1,24}$/.test(x)))].slice(0,120):[];
 const isLocked=k=>GEV.locked.includes(k);
+// ganze Hauptmenü-Reiter: ausgeblendet und ohne Wirkung
+const TABLOCK={upg:'Upgrades & Operatoren',coll:'Sammlung & Ausrüstung',cos:'Cosmetics',help:'Steuerung'};
+const tabOff=t=>isLocked('tab:'+t);
 const lookLocked=k=>isLocked('look:'+k)||(typeof SECRETS!=='undefined'&&SECRETS.some(s=>s.look===k&&isLocked('item:'+s.id)));
 const wbActiveNow=()=>{const w=GEV.wb;if(!w)return false;const n=Date.now();return n>=w.at&&n<w.at+w.dur*60000;};
 const WBTYPES=['wb','wb2','wb3'];
@@ -7421,7 +7432,7 @@ function checkSW(){const out=[];for(const op in COLL)if(GUNS['sw_'+op]&&!swOwned
 function trySW(op,tier){if(tier<2||swOwned(op)||Math.random()>=0.04*tier)return '';giveSW(op);return 'SPEZIALWAFFE GEFUNDEN: '+GUNS['sw_'+op].name.toUpperCase();}
 function gunOpts(op){const a=[OPGUN[op]||'ar'];if(swOwned(op)&&!isLocked('gun:sw_'+op))a.push('sw_'+op);const d=loadSec();for(const g of SECGUNS)if(d.g[g]&&!isLocked('gun:'+g))a.push(g);return a;}
 function loadGunSel(){let d={};try{d=JSON.parse(localStorage.getItem(GKEY)||'{}')||{};}catch(e){d={};}return d&&typeof d==='object'?d:{};}
-function chosenGun(op){const g=loadGunSel()[op];return gunOpts(op).includes(g)?g:(OPGUN[op]||'ar');}
+function chosenGun(op){if(tabOff('coll'))return OPGUN[op]||'ar';const g=loadGunSel()[op];return gunOpts(op).includes(g)?g:(OPGUN[op]||'ar');}
 function setGun(op,g){if(!gunOpts(op).includes(g))return false;const d=loadGunSel();d[op]=g;try{localStorage.setItem(GKEY,JSON.stringify(d));}catch(e){}return true;}
 const gunAllowed=(op,g)=>!!GUNS[g]&&!isLocked('gun:'+g)&&(g===OPGUN[op]||g==='sw_'+op||SECGUNS.includes(g));
 const gunText=G=>[`${Math.round(G.dmg*(G.pellets||1))} Schaden`,`${Math.round(60/G.cd)} Schuss/Min`,`Magazin ${G.mag}`].concat(G.pierce?[`durchschlägt ${G.pierce}`]:[],G.explode?['explodiert']:[],G.scope?['Zielfernrohr']:[]).join(' · ');
@@ -7495,10 +7506,11 @@ const spentPts=op=>SKK.reduce((a,k)=>a+((loadPr()[op].pts[k])||0),0);
 const freePts=op=>Math.max(0,opLevel(op).lvl-1-spentPts(op));
 function addSkill(op,k){if(!SKILLS[k]||freePts(op)<=0)return false;const P=loadPr()[op].pts;if((P[k]||0)>=SKILLS[k].max)return false;P[k]=(P[k]||0)+1;savePr();return true;}
 function resetSkills(op){loadPr()[op].pts={};savePr();}
-function skillBonus(op){const out={};if(!COLL[op])return out;const P=loadPr()[op].pts;for(const k of SKK)if(P[k])out[SKILLS[k].b]=(out[SKILLS[k].b]||0)+SKILLS[k].per*P[k];return out;}
+function skillBonus(op){const out={};if(!COLL[op]||tabOff('upg'))return out;const P=loadPr()[op].pts;for(const k of SKK)if(P[k])out[SKILLS[k].b]=(out[SKILLS[k].b]||0)+SKILLS[k].per*P[k];return out;}
 function addOpXp(op,n){if(!COLL[op])return null;const before=opLevel(op).lvl;loadPr()[op].xp+=Math.max(0,Math.round(n));savePr();const after=opLevel(op).lvl;return{op,gain:Math.round(n),before,after};}
 function runXp(d,win,season){return Math.round((d.time/4+d.kills*0.6+(d.bk||0)*150+(d.lvl||1)*12)*(win?1.5:1)*(season?SEASON_XP:1));}
-const itemBonus=op=>COLL[op]?sumB(op,it=>equipped(op).includes(it.id)&&!isLocked('item:'+it.id)?stars(op,it.id):0):{};
+const eqActive=op=>tabOff('coll')?[]:equipped(op);
+const itemBonus=op=>COLL[op]&&!tabOff('coll')?sumB(op,it=>equipped(op).includes(it.id)&&!isLocked('item:'+it.id)?stars(op,it.id):0):{};
 const collBonus=op=>COLL[op]?addB(itemBonus(op),skillBonus(op)):{};
 const maxBonus=op=>{if(!COLL[op])return {};const b=sumB(op,()=>3);for(const k of SKK)b[SKILLS[k].b]=(b[SKILLS[k].b]||0)+SKILLS[k].per*SKILLS[k].max;return b;};
 function clampBonus(op,b){const mx=maxBonus(op),out={};if(!b||typeof b!=='object')return out;
@@ -7593,7 +7605,8 @@ const BINDNAME={fwd:'Vorwärts',back:'Rückwärts',left:'Links',right:'Rechts',t
 const BINDKEY='lastbreach.binds.v1';
 let BIND=(()=>{let s={};try{s=JSON.parse(localStorage.getItem(BINDKEY)||'{}')||{};}catch(e){s={};}const o={};for(const pl in BINDDEF){o[pl]=Object.assign({},BINDDEF[pl]);if(s[pl])for(const a in BINDDEF[pl])if(typeof s[pl][a]==='string'&&s[pl][a].length<24)o[pl][a]=s[pl][a];}return o;})();
 const saveBind=()=>{try{localStorage.setItem(BINDKEY,JSON.stringify(BIND));}catch(e){}};
-const bk=(pl,a)=>{const c=BIND[pl][a];return !!(keys[c]||KQ[c]);};
+const KB=()=>tabOff('help')?BINDDEF:BIND;
+const bk=(pl,a)=>{const c=KB()[pl][a];return !!(keys[c]||KQ[c]);};
 function keyName(c){if(!c)return '–';const M={Mouse0:'Linke Maustaste',Mouse1:'Mittlere Maustaste',Mouse2:'Rechte Maustaste',Mouse3:'Maustaste 4',Mouse4:'Maustaste 5',Space:'Leertaste',ShiftLeft:'Umschalt links',ShiftRight:'Umschalt rechts',ControlLeft:'Strg links',ControlRight:'Strg rechts',AltLeft:'Alt',Enter:'Enter',NumpadEnter:'Num Enter',Tab:'Tab',Backspace:'Rücktaste',ArrowUp:'Pfeil hoch',ArrowDown:'Pfeil runter',ArrowLeft:'Pfeil links',ArrowRight:'Pfeil rechts',Comma:',',Period:'.',Minus:'-',Delete:'Entf',End:'Ende',PageDown:'Bild runter',PageUp:'Bild hoch',Home:'Pos1',Insert:'Einfg',CapsLock:'Feststelltaste'};
   if(M[c])return M[c];if(/^Key./.test(c))return c.slice(3);if(/^Digit./.test(c))return c.slice(5);if(/^Numpad/.test(c))return 'Num '+c.slice(6);return c;}
 let bindWait=null;
@@ -7621,9 +7634,9 @@ addEventListener('keydown',e=>{
   if(adminOpen){if(k==='escape')closeAdmin();return;}
   if((k.startsWith('arrow')||e.code==='Space')&&state!=='menu')e.preventDefault();
   if(state==='menu'){if(k==='escape'&&view!=='main')goBack();return;}
-  if(e.code===BIND.p1.mute&&!e.repeat)toggleMute();
+  if(e.code===KB().p1.mute&&!e.repeat)toggleMute();
   if(e.code==='F3'&&!e.repeat){e.preventDefault();FPSV.on=!FPSV.on;try{localStorage.setItem('lastbreach.fps',FPSV.on?'1':'0');}catch(err){}$('fps').hidden=!FPSV.on;}
-  if((e.code===BIND.p1.pause||k==='escape')&&$('lvup').hidden)pauseKey();
+  if((e.code===KB().p1.pause||k==='escape')&&$('lvup').hidden)pauseKey();
 });
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;keys[e.code]=false;});
 addEventListener('blur',()=>{keys={};LOOK.mouseFire=false;LOOK.ads=false;});
@@ -7676,7 +7689,7 @@ function stepMove(p,mx,my,dt,base){
 function controlLocal(p,slot,dt){
   let f=0,s=0,turn=0,fire=false,assist=false,run=false,jump=false,take=false,rld=false;
   if(slot===0){
-    const B=BIND.p1,K=c=>keys[c]?1:0;
+    const B=KB().p1,K=c=>keys[c]?1:0;
     f+=K(B.fwd)-K(B.back);s+=K(B.right)-K(B.left);
     if(mode!=='local'){f+=(keys.ArrowUp?1:0)-(keys.ArrowDown?1:0);turn+=(keys.ArrowRight?1:0)-(keys.ArrowLeft?1:0);}
     turn+=K(B.turnR)-K(B.turnL);
@@ -8839,8 +8852,8 @@ function lookUnlocked(op){const s=new Set();if(!COLL[op])return s;
 const lookCustom=op=>Array.isArray(loadLk()[op]);
 function lookFor(op){
   if(!COLL[op])return [];
-  if(lookCustom(op)){const U=lookUnlocked(op),a=loadLk()[op].filter(k=>U.has(k));
-    if(equipped(op).some(id=>{const it=COLL[op].find(i=>i.id===id);return it&&it.admin;})&&!a.includes('admin'))a.push('admin');
+  if(lookCustom(op)&&!tabOff('cos')){const U=lookUnlocked(op),a=loadLk()[op].filter(k=>U.has(k));
+    if(eqActive(op).some(id=>{const it=COLL[op].find(i=>i.id===id);return it&&it.admin;})&&!a.includes('admin'))a.push('admin');
     return cleanLook(a);}
   return autoLook(op);
 }
@@ -8848,14 +8861,14 @@ function setLook(op,k,on){const d=loadLk();let a=lookCustom(op)?d[op].slice():lo
   if(on){if(!lookUnlocked(op).has(k)||a.length>=LOOKMAX)return false;a.push(k);}d[op]=a;try{localStorage.setItem(LKKEY,JSON.stringify(d));}catch(e){}return true;}
 function lookAuto(op){const d=loadLk();delete d[op];try{localStorage.setItem(LKKEY,JSON.stringify(d));}catch(e){}}
 function autoLook(op){
-  if(!COLL[op])return [];const out=cosmFor(op).slice();
-  for(const id of equipped(op)){const it=COLL[op].find(i=>i.id===id);if(!it)continue;
+  if(!COLL[op])return [];const out=tabOff('coll')?[]:cosmFor(op).slice();
+  for(const id of eqActive(op)){const it=COLL[op].find(i=>i.id===id);if(!it)continue;
     if(it.secret){out.push(it.look);continue;}
     if(it.admin)out.push('admin');else if(it.ev)out.push(it.ev);
     const k=Object.keys(it.b)[0];if(LOOKMAP[k])out.push(LOOKMAP[k]);}
   return cleanLook(out);
 }
-const isAdminDevice=op=>adminUnlocked||equipped(op).some(id=>{const it=COLL[op]&&COLL[op].find(i=>i.id===id);return it&&it.admin;});
+const isAdminDevice=op=>adminUnlocked||eqActive(op).some(id=>{const it=COLL[op]&&COLL[op].find(i=>i.id===id);return it&&it.admin;});
 function drawCrosshair(cx,cy,p){
   const base=gunOf(p).cross||8,g=base+(p.trigger?6:0)+(p.sprint?10:0)+(p.z>2?8:0);
   ctx.strokeStyle='rgba(0,0,0,0.6)';ctx.lineWidth=4;
@@ -8995,12 +9008,15 @@ function sha256(input){
   return out;
 }
 const ADMIN_KEY='lastbreach.admin.pw',ADMIN_DEFAULT=sha256('breach-admin');
+const TESTER_DEFAULT=sha256('breach-beta');
+const testerHash=()=>GEV.tester||TESTER_DEFAULT;
+let testerUnlocked=false;
 let adminUnlocked=false,adminOpen=false,adminTab='p0',adminCollOp=OPS[0].id,adminMsg='',adminResetArm=false;
 function adminHash(){try{return localStorage.getItem(ADMIN_KEY)||ADMIN_DEFAULT;}catch(e){return ADMIN_DEFAULT;}}
 function openAdmin(){
   if(adminOpen){closeAdmin();return;}
   if(isGuest()){bannerTxt='NUR DER HOST KANN DAS ADMIN-MENÜ ÖFFNEN';bannerT=2.5;return;}
-  adminOpen=true;adminMsg='';adminResetArm=false;
+  adminOpen=true;adminMsg='';adminResetArm=false;adminPromoteArm=false;if(adminUnlocked||testerUnlocked)fetchVersions().then(()=>{if(adminOpen)renderAdmin();});
   if(S&&state==='play')state='admin';
   releaseLock();$('admin').hidden=false;
   if(!S&&!['coll','pw','season','desk'].includes(adminTab))adminTab='season';
@@ -9018,8 +9034,9 @@ const RATES={xp:{label:'XP-Rate',vals:[0.5,1,2,3,5,10]},dmg:{label:'Schaden',val
 const fmtX=v=>'×'+String(v).replace('.',',');
 function seg(act,vals,cur,fmt=fmtX){return '<div class="seg">'+vals.map(v=>`<button data-act="${act}" data-v="${v}" aria-pressed="${Math.abs(cur-v)<1e-6}">${fmt(v)}</button>`).join('')+'</div>';}
 // Admin-Menü: Navigation links, Status oben, Inhalte in Karten
-let adminLockDraft=null,adminCollF='all';
+let adminLockDraft=null,adminCollF='all',adminPromoteArm=false;
 const LOCKCATS=()=>[
+  ['Menü-Reiter','Ganze Reiter im Hauptmenü: verschwinden bei allen und haben keine Wirkung mehr (Upgrades ohne Skill-Boni, Sammlung ohne Ausrüstung und Waffenwahl, Cosmetics ohne eigene Auswahl, Steuerung mit Standard-Tasten)',Object.keys(TABLOCK).map(t=>['tab:'+t,TABLOCK[t]])],
   ['Aussehen aus der Ausrüstung','Westen, Rucksack, Drohne und mehr: werden bei allen ausgeblendet',['armor','rig','pack','drone','nvg','boots','medic','antenna','xmas','halloween','easter'].map(k=>['look:'+k,LOOKTITLE[k]])],
   ['Level-Aussehen','Belohnungen über das Operator-Level',COSM.map(c=>['look:'+c.id,c.n])],
   ['Geheim-Aussehen','Weltboss-Beute wie Engels- und Teufelsflügel',SECCOS.map(c=>['look:'+c.id,c.n])],
@@ -9031,15 +9048,16 @@ function admCard(title,note,body,cls){return `<section class="apanel${cls?' '+cl
 function collGroupOf(it){return it.wpn?'wpn':it.secret?'secret':it.admin?'admin':(mapById(it.map)&&mapById(it.map).season)?'event':it.map;}
 function renderAdmin(){
   const B=$('adminbody');
+  if(!adminUnlocked&&testerUnlocked){renderTester();return;}
   if(!adminUnlocked){
-    B.innerHTML=`<div class="alogin"><p>Gib das Admin-Passwort ein.</p><form id="adminform" class="netbox"><input id="adminpw" type="password" autocomplete="off" class="pw" aria-label="Admin-Passwort"><button class="btn" type="submit">Entsperren</button></form><div class="status" id="adminerr">${esc(adminMsg)}</div></div>`;
-    $('adminform').onsubmit=e=>{e.preventDefault();const v=$('adminpw').value;if(sha256(v)===adminHash()){adminUnlocked=true;adminMsg='';renderAdmin();}else{adminMsg='Falsches Passwort.';renderAdmin();$('adminpw').focus();}};
+    B.innerHTML=`<div class="alogin"><p>Admin-Passwort oder Tester-Passwort (für den Test-Server) eingeben.</p><form id="adminform" class="netbox"><input id="adminpw" type="password" autocomplete="off" class="pw" aria-label="Admin-Passwort"><button class="btn" type="submit">Entsperren</button></form><div class="status" id="adminerr">${esc(adminMsg)}</div></div>`;
+    $('adminform').onsubmit=e=>{e.preventDefault();const v=$('adminpw').value;if(sha256(v)===adminHash()){adminUnlocked=true;adminMsg='';fetchVersions().then(()=>{if(adminOpen)renderAdmin();});renderAdmin();}else if(sha256(v)===testerHash()){testerUnlocked=true;adminMsg='';fetchVersions().then(()=>{if(adminOpen)renderAdmin();});renderAdmin();}else{adminMsg='Falsches Passwort.';renderAdmin();$('adminpw').focus();}};
     setTimeout(()=>{const i=$('adminpw');if(i)i.focus();},0);return;
   }
   // Navigation
   const groups=[];
   if(S)groups.push(['Im Einsatz',S.players.map(p=>['p'+p.idx,(coop()?'S'+(p.idx+1)+' · ':'')+p.op.name,'Spieler']).concat([['world','Welt','Gegner, Zeit, Ereignisse']])]);
-  groups.push(['Global für alle',[['season','Events & Weltboss',GEV.season?SEASONS[GEV.season].short:(GEV.wb?'Weltboss':'')],['lock','Sperren',GEV.locked.length?GEV.locked.length+' aktiv':'']]]);
+  groups.push(['Global für alle',[['vers','Versionen',VERS.beta&&VERS.main&&cmpVer(VERS.beta.version,VERS.main.version)>0?'Beta '+VERS.beta.version+' wartet':''],['season','Events & Weltboss',GEV.season?SEASONS[GEV.season].short:(GEV.wb?'Weltboss':'')],['lock','Sperren',GEV.locked.length?GEV.locked.length+' aktiv':'']]]);
   groups.push(['Dieses Gerät',[['coll','Sammlung',''],['desk','Updates & Discord',''],['pw','Passwort','']]]);
   const all=groups.flatMap(g=>g[1]);if(!all.some(t=>t[0]===adminTab))adminTab=all[0][0];
   let h='<div class="admwrap"><nav class="admnav" role="tablist" aria-label="Admin-Bereiche">';
@@ -9073,6 +9091,24 @@ function renderAdmin(){
     h+=admCard('Weltboss nur in dieser Runde','Für alle Spieler zu einer Uhrzeit: Bereich „Events &amp; Weltboss“.','<div class="abtns">'+WBTYPES.map(t=>`<button data-act="wblocal" data-id="${t}">${esc(ETYPES[t].name)}</button>`).join('')+'</div>');
     h+=admCard('Zufallsereignis','','<div class="abtns">'+EVK.map(k=>`<button data-act="event" data-id="${k}">${esc(EVENTS[k].name)}</button>`).join('')+'</div>');
     h+=admCard('Waffe abwerfen','Erscheint neben Spieler 1.','<div class="abtns">'+GUNK.map(g=>`<button data-act="dropgun" data-id="${g}">${esc(GUNS[g].name)}</button>`).join('')+'</div>','wide');
+    h+='</div>';
+  }else if(adminTab==='vers'){
+    const M=VERS.main,Bv=VERS.beta,newer=M&&Bv&&cmpVer(Bv.version,M.version)>0,app=UPD.app&&UPD.app.appVersion;
+    const col=(t,I,url)=>`<div class="vcol"><div class="asub">${t}</div>${I?`<b class="vbig">${esc(I.version)}</b><ul>${(I.notes||[]).map(n=>`<li>${esc(String(n).replace(/^Beta: /,''))}</li>`).join('')}</ul>`:`<b class="vbig">–</b><p class="note">${VERS.loading?'Lade …':'Nicht gefunden.'}</p>`}<p class="note">${esc(url)}</p></div>`;
+    h+=`<div class="ahead"><h3>Versionen <small class="tag">Test-Server → Hauptspiel</small></h3></div><div class="agrid">`;
+    h+=admCard('Was läuft wo','',`<div class="vcols">${col('Hauptspiel (alle Spieler)',M,stableUrl())}${col('Test-Server (Beta)',Bv,betaUrl())}</div><div class="abtns"><button data-act="verload">Neu laden</button></div>`,'wide');
+    {const hints=[];
+      if(!Bv)hints.push('Es liegt keine Beta auf dem Test-Server.');
+      else if(!newer)hints.push('Die Beta ist nicht neuer als das Hauptspiel. Es gibt nichts zu übernehmen.');
+      else{hints.push('Spieler bekommen danach das Update-Fenster. Windows-App: „Jetzt installieren“, danach ist ein <b>Neustart</b> des Spiels nötig. Im Browser reicht neu laden.');
+        if(Bv.minApp)hints.push(`Diese Version braucht mindestens die Windows-App ${esc(Bv.minApp)}. Ältere Apps bekommen statt des Updates den Hinweis auf die neue Windows-ZIP. <b>Lade die neue ZIP vorher als Release hoch.</b>`);
+        hints.push('GitHub veröffentlicht die Änderung in etwa 1 bis 5 Minuten.');
+        if(cmpVer(Bv.version,GAME_VERSION)>0)hints.push(`Du spielst selbst noch ${esc(GAME_VERSION)}${isBeta()?' (Beta-Kanal)':''}: Nach dem Übernehmen „Nach Update suchen“ und danach neu starten.`);}
+      if(!DCFG.ghToken)hints.push('Zum Übernehmen wird der GitHub-Token gebraucht (Bereich „Events &amp; Weltboss“).');
+      h+=admCard('Beta ins Hauptspiel übernehmen',hints.join('<br>'),`<div class="abtns"><button data-act="promote" class="${adminPromoteArm?'danger':''}"${newer&&DCFG.ghToken&&!VERS.busy?'':' disabled'}>${VERS.busy?'Übernehme …':adminPromoteArm?'Wirklich '+esc(Bv.version)+' für alle veröffentlichen?':'Beta '+(Bv?esc(Bv.version):'')+' → Hauptspiel'}</button><button data-act="vercheck">Nach Update suchen</button></div>`,'wide');}
+    h+=admCard('Dein Kanal',`Dieses Gerät folgt gerade: <b>${isBeta()?'Test-Server (Beta)':'Hauptspiel'}</b>.${WEBBETA?' Du bist auf der Beta-Seite im Browser.':''}`,`<div class="abtns"><button data-act="chan" data-id="stable" aria-pressed="${!isBeta()}">Hauptspiel</button><button data-act="chan" data-id="beta" aria-pressed="${isBeta()}">Test-Server (Beta)</button>${DESK&&UPD.app&&UPD.app.updated?'<button data-act="updreset">Installiertes Update entfernen</button>':''}</div>`);
+    h+=admCard('Tester-Passwort',`Mit diesem Passwort öffnen Tester über ${esc('Strg + Umschalt + A')} nur den Test-Server-Bereich und können zwischen Hauptspiel und Beta wechseln, ohne Admin-Rechte. ${GEV.tester?'Ein eigenes Passwort ist global gesetzt.':'Noch das Standard-Passwort <b>breach-beta</b>: bitte ändern.'}`,
+      `<form id="tpform" class="pwform"><label for="tp1">Neues Tester-Passwort</label><input id="tp1" type="password" class="pw" autocomplete="new-password"><button class="btn" type="submit">Für alle setzen</button></form>`);
     h+='</div>';
   }else if(adminTab==='lock'){
     if(!adminLockDraft)adminLockDraft=new Set(GEV.locked);const D=adminLockDraft,changed=[...D].sort().join()!==[...GEV.locked].sort().join();
@@ -9132,6 +9168,8 @@ function renderAdmin(){
   const dfm=$('dcform');if(dfm)dfm.onsubmit=e=>{e.preventDefault();const v=$('dcid').value.trim();
     if(v&&!/^\d{15,22}$/.test(v)){adminMsg='Die Anwendungs-ID besteht nur aus 15 bis 22 Ziffern.';renderAdmin();return;}
     DCFG.discordId=v===baked(BAKED.discordId)?'':v;saveDcfg();presence(true);adminMsg='Discord-ID gespeichert.';setTimeout(()=>{if(adminOpen&&adminTab==='desk')renderAdmin();},1500);renderAdmin();};
+  const tpf=$('tpform');if(tpf)tpf.onsubmit=e=>{e.preventDefault();const a=$('tp1').value;if(a.length<4){adminMsg='Das Tester-Passwort braucht mindestens 4 Zeichen.';renderAdmin();return;}if(sha256(a)===adminHash()){adminMsg='Bitte ein anderes Passwort als das Admin-Passwort nehmen.';renderAdmin();return;}
+    adminMsg='Speichere …';renderAdmin();setGlobalEvents({tester:sha256(a)}).then(r=>{if(r==='manual')GEV.tester=sha256(a);adminMsg=r==='manual'?'GitHub-Seite geöffnet, neuer Inhalt ist in der Zwischenablage: alles markieren, Strg+V, „Commit changes“.':'Tester-Passwort gilt jetzt für alle (andere Spiele übernehmen es spätestens nach 5 Minuten).';if(adminOpen)renderAdmin();}).catch(err=>{adminMsg='Fehler: '+(err&&err.message||err);if(adminOpen)renderAdmin();});};
   const f=$('pwform');if(f)f.onsubmit=e=>{e.preventDefault();const a=$('pw1').value,b=$('pw2').value;
     if(a.length<4){adminMsg='Das Passwort braucht mindestens 4 Zeichen.';}else if(a!==b){adminMsg='Die beiden Eingaben stimmen nicht überein.';}
     else{try{localStorage.setItem(ADMIN_KEY,sha256(a));adminMsg='Neues Passwort gespeichert.';}catch(err){adminMsg='Speichern nicht möglich (Browser-Speicher gesperrt).';}}
@@ -9143,7 +9181,7 @@ $('adminbody').addEventListener('click',e=>{
   const act=b.dataset.act;if(!act)return;
   const id=b.dataset.id,v=Number(b.dataset.v);
   const p=S&&adminTab[0]==='p'&&adminTab!=='pw'?S.players[+adminTab.slice(1)]:null;
-  adminMsg='';if(act!=='collreset')adminResetArm=false;
+  adminMsg='';if(act!=='collreset')adminResetArm=false;if(act!=='promote')adminPromoteArm=false;
   if(act.startsWith('rate:')&&p){p.adm[act.slice(5)]=v;adminMsg=`${RATES[act.slice(5)].label} für ${p.op.name}: ${act==='rate:loot'?v:fmtX(v)}`;}
   else if(act==='god'&&p){p.adm.god=!p.adm.god;adminMsg=`Unverwundbar ${p.adm.god?'an':'aus'}`;}
   else if(act==='heal'&&p&&!p.down){p.hp=p.maxHp;adminMsg='Panzerung aufgefüllt';}
@@ -9188,13 +9226,19 @@ $('adminbody').addEventListener('click',e=>{
     setGlobalEvents({worldboss:wb}).then(r=>{adminMsg=r==='manual'?'GitHub-Seite geöffnet, neuer Inhalt ist in der Zwischenablage: alles markieren, Strg+V, „Commit changes“.':(wb?(act==='wbnow'?'Weltboss läuft jetzt für alle (andere Spiele merken es spätestens nach 5 Minuten).':'Weltboss geplant: '+fmtWhen(wb.at)):'Weltboss abgesagt.');renderWbBar();if(adminOpen)renderAdmin();})
       .catch(err=>{adminMsg='Fehler: '+(err&&err.message||err);if(adminOpen)renderAdmin();});return;}
   else if(act==='collf'){adminCollF=id||'all';}
-  else if(act==='lock'&&adminLockDraft&&/^(look|gun|skin|item):/.test(id)){if(adminLockDraft.has(id))adminLockDraft.delete(id);else adminLockDraft.add(id);}
+  else if(act==='verload'){fetchVersions().then(()=>{if(adminOpen)renderAdmin();});}
+  else if(act==='vercheck'){adminMsg='Prüfe …';renderAdmin();checkUpdate(true).then(m=>{adminMsg=m;if(adminOpen)renderAdmin();});return;}
+  else if(act==='promote'){if(!adminPromoteArm){adminPromoteArm=true;renderAdmin();return;}adminPromoteArm=false;VERS.busy=true;adminMsg='Übernehme Beta ins Hauptspiel …';renderAdmin();
+    promoteBeta().then(v=>{VERS.busy=false;adminMsg=`Version ${v} ist jetzt das Hauptspiel. GitHub veröffentlicht in 1 bis 5 Minuten, danach sehen alle Spieler das Update-Fenster (Windows-App: installieren und neu starten).`;return fetchVersions();}).catch(err=>{VERS.busy=false;adminMsg='Fehler: '+(err&&err.message||err);}).then(()=>{if(adminOpen)renderAdmin();});return;}
+  else if(act==='chan'&&!DESK&&(id==='beta')!==WEBBETA){const base=stableUrl().replace(/version\.json(\?.*)?$/,'');if(base){location.href=base+(id==='beta'?'beta/':'');return;}}
+  else if(act==='chan'){DCFG.channel=id==='beta'?'beta':'';saveDcfg();adminMsg='Prüfe '+(id==='beta'?'Beta':'stabile Version')+' …';renderAdmin();checkUpdate(true).then(m=>{adminMsg=m;if(adminOpen)renderAdmin();});return;}
+  else if(act==='lock'&&adminLockDraft&&/^(look|gun|skin|item|tab):/.test(id)){if(adminLockDraft.has(id))adminLockDraft.delete(id);else adminLockDraft.add(id);}
   else if(act==='lockcat'&&adminLockDraft){const c=LOCKCATS()[+id];if(c)for(const [k] of c[2]){if(v)adminLockDraft.add(k);else adminLockDraft.delete(k);}}
   else if(act==='lockundo'){adminLockDraft=null;}
   else if(act==='lockclear'&&adminLockDraft){adminLockDraft.clear();}
   else if(act==='locksave'&&adminLockDraft){const list=cleanLocked([...adminLockDraft]);adminMsg='Speichere …';renderAdmin();
     setGlobalEvents({locked:list}).then(r=>{adminMsg=r==='manual'?'GitHub-Seite geöffnet, neuer Inhalt ist in der Zwischenablage: alles markieren, Strg+V, „Commit changes“.':(list.length?list.length+' Sperren gelten jetzt für alle (andere Spiele übernehmen sie spätestens nach 5 Minuten).':'Alle Sperren aufgehoben.');
-      if(r==='manual')GEV.locked=list;adminLockDraft=null;OPS.lookT=0;if(adminOpen)renderAdmin();}).catch(err=>{adminMsg='Fehler: '+(err&&err.message||err);if(adminOpen)renderAdmin();});return;}
+      if(r==='manual')GEV.locked=list;adminLockDraft=null;OPS.lookT=0;applyTabLocks();if(state==='menu'&&view==='main')renderMain();if(adminOpen)renderAdmin();}).catch(err=>{adminMsg='Fehler: '+(err&&err.message||err);if(adminOpen)renderAdmin();});return;}
   else if(act==='gevcheck'){adminMsg='Prüfe …';renderAdmin();checkGlobal().then(()=>{adminMsg=GEV.status;if(adminOpen)renderAdmin();});return;}
   else if(act==='tokdel'){DCFG.ghToken='';saveDcfg();adminMsg='Token gelöscht.';}
   else if(act==='toknew'){const u='https://github.com/settings/personal-access-tokens/new?name=Last%20Breach%20Events&description=Globale%20Events%20fuer%20Last%20Breach&target_name='+encodeURIComponent((repoName().split('/')[0])||'')+'&expires_in=366&contents=write';if(DESK)DESK.openExternal(u);else window.open(u,'_blank','noopener');adminMsg='GitHub geöffnet.';}
@@ -9304,6 +9348,7 @@ $('cosbody').addEventListener('click',e=>{const b=e.target.closest('button');if(
   else if(act==='lnone'){const d=loadLk();d[op]=[];try{localStorage.setItem(LKKEY,JSON.stringify(d));}catch(x){}}else return;
   OPS.lookT=0;renderCos();const f=$('cosbody').querySelector(`[data-id="${id}"]`)||$('cosbody').querySelector('button');if(f)f.focus();});
 function showView(v){
+  if(TABLOCK[v]&&tabOff(v))v='main';
   view=v;
   for(const id of ['main','setup','coll','upg','cos','help'])$('v_'+id).hidden=id!==v;
   if(v==='cos')renderCos();
@@ -9333,8 +9378,14 @@ function renderMaps(){
   const se=activeSeason();$('mapnote').textContent=guest?'Der Host wählt die Karte.':(se?`${SEASONS[se].name} aktiv: +20 % Erfahrung, Sonderkarte ${mapById(SEASONS[se].map).name}`:'');
 }
 
+function applyTabLocks(){
+  for(const t in TABLOCK){const b=$('b_'+t);if(b)b.hidden=tabOff(t);}
+  const off=tabOff('help'),pk=$('ptabs')&&$('ptabs').querySelector('[data-pt="keys"]');
+  if(pk){pk.hidden=off;if(off&&!$('pt_keys').hidden){bindWait=null;$('pt_keys').hidden=true;$('pt_set').hidden=false;for(const x of $('ptabs').children)x.setAttribute('aria-selected',String(x.dataset.pt==='set'));}}
+  if(state==='menu'&&TABLOCK[view]&&tabOff(view))showView('main');
+}
 function renderMain(){
-  checkSW();renderWbBar();
+  applyTabLocks();checkSW();renderWbBar();
   {const d=loadSec();$('b_coscnt').textContent=`${Object.keys(d.c).length} / ${SECCOS.length} geheim`;}
   let tot=0,max=0;const parts=[];
   for(const op of OPS){const n=collCount(op.id),m=pubItems(op.id).length*3,L=opLevel(op.id),fp=freePts(op.id);tot+=n;max+=m;
@@ -9389,7 +9440,7 @@ function renderColl(){
   // Geheime Items: immer sichtbar, Herkunft bleibt geheim
   h+=`<h3>✦ Geheime Items <small class="tag">${COLL[op].filter(i=>i.secret&&stars(op,i.id)>0).length} / ${SECRETS.length} gefunden</small></h3><div class="collgrid">`;
   for(const it of COLL[op].filter(i=>i.secret)){const st=stars(op,it.id),on=eq.includes(it.id);const per={};for(const k in it.b)per[k]=it.b[k]*Math.max(1,st);
-    h+=`<div class="item r4 secret${st?'':' locked'}${on?' on':''}"><span class="rar">Geheim${on?' · ausgerüstet':''}</span><span class="nm">${esc(it.name)}</span>${lookHtml(it)}
+    h+=`<div class="item r4 secret${st?'':' locked'}${on?' on':''}"><span class="rar">Geheim${on?' · ausgerüstet':''}</span><span class="nm">${st?esc(it.name):'???'}</span>${st?lookHtml(it):`<span class="lk">${ICO(ICONS.rig)}<span>Am Charakter: ???</span></span>`}
       <span class="st">${st?'★'.repeat(st)+'☆'.repeat(3-st):'???'}</span><span class="tx">${st?bonusText(per).join('<br>'):'Herkunft: ???<br>Wirkung: ???'}</span>
       ${st?`<button class="eqb" data-act="${on?'uneq':'eq'}" data-id="${it.id}" ${!on&&eq.length>=EQN?'disabled title="Alle 4 Plätze belegt"':''}>${on?'Ablegen':'Ausrüsten'}</button>`:''}</div>`;}
   h+='</div>';
@@ -9438,8 +9489,22 @@ $('upgbody').addEventListener('click',e=>{const b=e.target.closest('button');if(
   const f=[...$('upgbody').querySelectorAll('button')].find(x=>x.dataset.act+':'+(x.dataset.id||'')===sel&&!x.disabled);if(f)f.focus();});
 
 /* ---------- Patch Notes ---------- */
+// Admin-/Tester-Zeilen bleiben aus den öffentlichen Patch Notes und Update-Hinweisen raus
+const pubNote=x=>!/admin|tester/i.test(String(x));
+const pubNotes=a=>(Array.isArray(a)?a:[]).filter(pubNote);
 const NOTES=[
- {v:'0.22.0',t:'Event-Gegner, Admin, Logo',l:[
+ {v:'0.22.2',t:'Menü & Sammlung',l:[
+  'Geheim-Items in der Sammlung zeigen ihren Namen erst, wenn du sie gefunden hast',
+  'Admin kann ganze Hauptmenü-Reiter (Upgrades, Sammlung, Cosmetics, Steuerung) für alle sperren: sie verschwinden aus dem Menü und wirken nicht mehr',
+  'Admin- und Tester-Funktionen tauchen nicht mehr in Patch Notes und Update-Hinweisen auf',
+ ]},
+ {v:'0.22.1',t:'Beta-Kanal',l:[
+  'Test-Server: neue Versionen landen zuerst als Beta und kommen erst ins Hauptspiel, wenn der Admin sie übernimmt',
+  'Admin-Bereich „Versionen“: Hauptspiel und Beta vergleichen, Beta mit einem Klick ins Hauptspiel übernehmen, Hinweise zu Neustart und Windows-ZIP',
+  'Tester-Passwort: Über Strg + Umschalt + A kommen Tester ohne Admin-Rechte in den Test-Server-Bereich und wählen Hauptspiel oder Beta',
+  'Im Browser liegt die Beta unter …/last-breach/beta/',
+ ]},
+ {v:'0.22.0',t:'Event-Gegner & Logo',l:[
   'Event-Karten mit passenden Gegnern: Yetis im Winterdorf, Zombies auf dem Geisterfriedhof, Hasen im Ostergarten',
   'Neues Last-Breach-Logo für die Windows-App und den Discord-Status',
   'Admin-Menü neu aufgebaut: Navigation links, Statusleiste, Inhalte in übersichtlichen Karten',
@@ -9505,7 +9570,7 @@ const NOTES=[
  {v:'0.14.0',t:'Events & Level',l:['Operator-Level mit Skillpunkten','Weihnachts-, Halloween- und Oster-Event mit eigenen Karten und Beute']},
 ];
 function renderNotes(){$('notesver').textContent='v'+GAME_VERSION.replace(/^__.*$/,NOTES[0].v);
-  $('notes').innerHTML=NOTES.map((n,i)=>`<h3>Version ${esc(n.v)}${i===0?'<span class="new">NEU</span>':''}<small>${esc(n.t)}</small></h3><ul>${n.l.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`).join('');}
+  $('notes').innerHTML=NOTES.map((n,i)=>`<h3>Version ${esc(n.v)}${i===0?'<span class="new">NEU</span>':''}<small>${esc(n.t)}</small></h3><ul>${(pubNotes(n.l).length?pubNotes(n.l):['Kleinere Verbesserungen']).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`).join('');}
 function toggleNotes(on){const N=$('notes'),b=$('b_notes');if(on===undefined)on=N.hidden;N.hidden=!on;b.setAttribute('aria-expanded',String(on));
   if(on){renderNotes();try{localStorage.setItem('lastbreach.notes.seen',NOTES[0].v);}catch(e){}b.classList.remove('fresh');}}
 $('b_notes').onclick=()=>{toggleNotes();if(!$('notes').hidden&&$('credits'))toggleCredits(false);};
@@ -9598,7 +9663,7 @@ function startGame(bonuses,mapId,season){
   last=performance.now();wantLock();
 }
 
-if(/lbtest/.test(location.href))window.__lb={get S(){return S;},get PROPS(){return PROPS;},WIN,MAXP,get state(){return state;},get NET(){return NET;},spawnElite:()=>spawnElite(),hurt:(e,d)=>hurt(e,d),hurtP:(e,d,pi)=>hurt(e,d,0,0,pi),adminGift:(i,id)=>{const p=S.players[i],g=p&&guestOf(p);if(g)sendTo(g,{t:"gift",id,op:p.op.id});},get bannerTxt(){return bannerTxt;},damagePlayer:(p,d)=>damagePlayer(p,d),giveSecret,lookFor,spawnMini:()=>spawnMini(),loadColl,rollLoot,collBonus,
+if(/lbtest/.test(location.href))window.__lb={get S(){return S;},get PROPS(){return PROPS;},WIN,MAXP,get state(){return state;},get NET(){return NET;},spawnElite:()=>spawnElite(),hurt:(e,d)=>hurt(e,d),hurtP:(e,d,pi)=>hurt(e,d,0,0,pi),adminGift:(i,id)=>{const p=S.players[i],g=p&&guestOf(p);if(g)sendTo(g,{t:"gift",id,op:p.op.id});},get bannerTxt(){return bannerTxt;},damagePlayer:(p,d)=>damagePlayer(p,d),giveSecret,lookFor,tabOff,skillBonus,itemBonus,chosenGun,KB,applyTabLocks,isAdminDevice,pubNotes,get GEV2(){return GEV;},get view(){return view;},spawnMini:()=>spawnMini(),loadColl,rollLoot,collBonus,
   resetColl:()=>{collMem={};for(const op in COLL)collMem[op]={};saveColl();},sha256,get PROPS(){return PROPS;},LOOK,blocked,
   spawnType:t=>spawn(t),triggerEvent,setWorld,MAPS,mapById,get MAP(){return MAP;},GUNS,dropGun,takeGun,opLevel,addOpXp,freePts,addSkill,collBonus,equipped,setEquip,EVSET,
   get selMap(){return selMap;},set selMap(v){selMap=v;},get GEV(){return GEV;},checkGlobal,get SND(){return SND;},get SFX(){return SFX;},checkUpdate,get UPD(){return UPD;},get DCFG(){return DCFG;},presence,get PRES(){return PRES;},get GAME_VERSION(){return GAME_VERSION;},setSeasonMode,activeSeason,seasonByDate,SEASONS,rollLoot};
@@ -9788,14 +9853,21 @@ const FPSV={on:false,n:0,acc:0};try{FPSV.on=localStorage.getItem('lastbreach.fps
 $('musvol').value=String(Math.round(SND.mus*100));$('musvol').addEventListener('input',()=>setMusicVol(Number($('musvol').value)/100));
 $('vol').value=String(Math.round(SND.vol*100));$('vol').addEventListener('input',()=>{setVol(Number($('vol').value)/100);if(SND.muted)toggleMute();SFX.hit(false);});
 /* ---------- Version, Updates und Discord ---------- */
-const GAME_VERSION='0.22.0';
+const GAME_VERSION='0.22.2';
 const DESK=window.lbDesktop||null;
 const BAKED={updateUrl:'https://tronicx21.github.io/last-breach/version.json',discordId:'1569055355495780492',repo:'Tronicx21/last-breach'};
 const DESKKEY='lastbreach.desktop.v1';
-const DCFG=(()=>{let d={};try{d=JSON.parse(localStorage.getItem(DESKKEY)||'{}')||{};}catch(e){d={};}return{updateUrl:typeof d.updateUrl==='string'?d.updateUrl:'',discordId:typeof d.discordId==='string'?d.discordId:'',discordOff:!!d.discordOff,skip:typeof d.skip==='string'?d.skip:'',ghToken:typeof d.ghToken==='string'?d.ghToken:''};})();
+const DCFG=(()=>{let d={};try{d=JSON.parse(localStorage.getItem(DESKKEY)||'{}')||{};}catch(e){d={};}return{updateUrl:typeof d.updateUrl==='string'?d.updateUrl:'',discordId:typeof d.discordId==='string'?d.discordId:'',discordOff:!!d.discordOff,skip:typeof d.skip==='string'?d.skip:'',ghToken:typeof d.ghToken==='string'?d.ghToken:'',channel:d.channel==='beta'?'beta':''};})();
 function saveDcfg(){try{localStorage.setItem(DESKKEY,JSON.stringify(DCFG));}catch(e){}}
 const baked=v=>/^__LB_/.test(v)?'':v;
-const updUrl=()=>DCFG.updateUrl||baked(BAKED.updateUrl);
+// Update-Kanal: Hauptspiel = version.json, Test-Server (Beta) = beta/version.json im selben Ordner.
+// Beta- und Hauptspiel-Datei sind identisch, damit eine Beta ohne Neubau ins Hauptspiel übernommen werden kann.
+const WEBBETA=/\/beta\/(index\.html)?$/.test(location.pathname||'');
+const updChannel=()=>DCFG.channel==='beta'||WEBBETA?'beta':'stable';
+const isBeta=()=>updChannel()==='beta';
+const stableUrl=()=>DCFG.updateUrl||baked(BAKED.updateUrl);
+const betaUrl=()=>stableUrl().replace(/version\.json(\?.*)?$/,'beta/version.json');
+const updUrl=()=>updChannel()==='beta'?betaUrl():stableUrl();
 const UPD={info:null,remoteDiscord:'',status:'',busy:false,done:false,checked:0,app:null};
 const SEMV=/^\d{1,4}\.\d{1,4}\.\d{1,4}$/;
 // Alte Nummern 1.x werden als 0.1x gelesen (1.9.0 = 0.19.0), seit der Umstellung auf 0.x
@@ -9820,7 +9892,7 @@ async function checkUpdate(manual){
   renderUpdate();return UPD.status;
 }
 function renderUpdate(){
-  const vl=$('verlabel');if(vl)vl.textContent='Version '+GAME_VERSION+(UPD.app&&UPD.app.updated?' (aktualisiert)':'');
+  const vl=$('verlabel');if(vl)vl.textContent='Version '+GAME_VERSION+(isBeta()?' · BETA':'')+(UPD.app&&UPD.app.updated?' (aktualisiert)':'');
   const box=$('updbar');if(!box)return;
   const I=UPD.info,show=updAvail()&&(DCFG.skip!==I.version||UPD.busy||UPD.done);
   box.hidden=!show;if(!show)return;
@@ -9833,7 +9905,7 @@ function renderUpdate(){
   else if(!DESK&&/^https?:/.test(location.protocol)&&I.page&&new URL(I.page).origin===location.origin)btns='<button class="btn" data-u="reload">Neu laden</button>';
   else if(I.page)btns='<a class="btn" href="'+esc(I.page)+'" target="_blank" rel="noopener">Zur neuen Version</a>';
   if(!UPD.busy&&!UPD.done)btns+='<button class="btn ghost" data-u="skip">Später</button>';
-  box.innerHTML=`<b>UPDATE VERFÜGBAR · VERSION ${esc(I.version)}</b><span>Du spielst Version ${esc(GAME_VERSION)}.${needFull?' Dieses Update braucht die neue Windows-Version (Komplettpaket).':''}</span>${I.notes.length?'<ul>'+I.notes.map(n=>'<li>'+esc(n)+'</li>').join('')+'</ul>':''}<div class="netbox">${btns}</div><div class="status" id="updmsg">${esc(UPD.err||'')}</div>`;
+  box.innerHTML=`<b>${updChannel()==="beta"?"BETA-":""}UPDATE VERFÜGBAR · VERSION ${esc(I.version)}</b><span>Du spielst Version ${esc(GAME_VERSION)}.${needFull?' Dieses Update braucht die neue Windows-Version (Komplettpaket).':''}</span>${pubNotes(I.notes).length?'<ul>'+pubNotes(I.notes).map(n=>'<li>'+esc(n)+'</li>').join('')+'</ul>':''}<div class="netbox">${btns}</div><div class="status" id="updmsg">${esc(UPD.err||'')}</div>`;
 }
 $('updbar').addEventListener('click',async e=>{const b=e.target.closest('[data-u]');if(!b)return;const a=b.dataset.u,I=UPD.info;if(!I)return;
   if(a==='skip'){DCFG.skip=I.version;saveDcfg();renderUpdate();}
@@ -9851,7 +9923,7 @@ function presence(force){
   const id=discordId();let a=null;
   if(id){
     const se=S&&S.season?SEASONS[S.season]:(activeSeason()?SEASONS[activeSeason()]:null);
-    a={largeImage:'logo',largeText:'Last Breach '+GAME_VERSION+(se?' · '+se.name:'')};
+    a={largeImage:'logo',largeText:'Last Breach '+GAME_VERSION+(isBeta()?' Beta':'')+(se?' · '+se.name:'')};
     if(S&&state!=='menu'){
       if(PRES.lastS!==S){PRES.lastS=S;PRES.start=now-Math.round((S.t||0)*1000);}
       const me=S.players[mode==='online'?myIdx():0],modeTxt=mode==='solo'?'Solo':mode==='local'?'Lokaler Koop':'Online-Koop';
@@ -9879,16 +9951,17 @@ async function checkGlobal(){
   try{
     let j;if(DESK)j=await DESK.fetchJson(url);else{const r=await fetch(url+'&t='+Date.now(),{cache:'no-store'});if(r.status===404){GEV.season=null;GEV.msg='';GEV.wb=null;GEV.locked=[];GEV.status='keine events.json';return;}if(!r.ok)throw new Error('HTTP '+r.status);j=await r.json();}
     const d=JSON.parse(b64utf8(j.content||''));
-    GEV.season=SEASONS[d.season]?d.season:null;GEV.msg=typeof d.message==='string'?d.message.slice(0,160):'';GEV.wb=cleanWb(d.worldboss);GEV.locked=cleanLocked(d.locked);GEV.sha=j.sha||null;GEV.checked=Date.now();
+    GEV.season=SEASONS[d.season]?d.season:null;GEV.msg=typeof d.message==='string'?d.message.slice(0,160):'';GEV.wb=cleanWb(d.worldboss);GEV.locked=cleanLocked(d.locked);GEV.tester=/^[0-9a-f]{64}$/.test(d.tester||'')?d.tester:'';GEV.sha=j.sha||null;GEV.checked=Date.now();
     GEV.status=GEV.season?SEASONS[GEV.season].name+' ist global aktiv':'kein globales Event aktiv';
   }catch(e){if(/HTTP 404/.test(String(e&&e.message))){GEV.season=null;GEV.msg='';GEV.status='keine events.json';}else GEV.status='Prüfung fehlgeschlagen: '+String(e&&e.message||e).replace(/^Error invoking remote method '[^']+': (Error: )?/,'').slice(0,80);}
+  applyTabLocks();OPS.lookT=0;
   if(state==='menu'){if(view==='main')renderMain();if(view==='setup')renderMaps();}
   if(adminOpen&&adminTab==='season')renderAdmin();
 }
 function setGlobalSeason(se,msg){return setGlobalEvents({season:se||null,message:msg||''});}
 async function setGlobalEvents(patch){
   const repo=repoName();if(!repo)throw new Error('Kein Repository eingestellt');
-  const data=Object.assign({season:GEV.season||null,message:GEV.msg||'',worldboss:GEV.wb||null,locked:GEV.locked||[]},patch);
+  const data=Object.assign({season:GEV.season||null,message:GEV.msg||'',worldboss:GEV.wb||null,locked:GEV.locked||[],tester:GEV.tester||''},patch);
   const se=data.season;
   const body=JSON.stringify(data,null,2)+'\n';
   const tok=DCFG.ghToken;
@@ -9902,9 +9975,49 @@ async function setGlobalEvents(patch){
   const put={message:'Globale Events: '+(se?SEASONS[se].name:'kein Saison-Event')+(data.worldboss?' · Weltboss '+new Date(data.worldboss.at).toISOString():''),content:utf8b64(body),branch:'main'};if(sha)put.sha=sha;
   const r=await fetch(api,{method:'PUT',headers:{...H,'Content-Type':'application/json'},body:JSON.stringify(put)});
   if(!r.ok)throw new Error(r.status===401?'Token ungültig oder abgelaufen':r.status===403||r.status===404?'Token darf das Repository nicht ändern (Contents: Read and write nötig)':'GitHub antwortet mit '+r.status);
-  GEV.season=se||null;GEV.msg=data.message||'';GEV.wb=cleanWb(data.worldboss);GEV.locked=cleanLocked(data.locked);GEV.checked=Date.now();GEV.status=se?SEASONS[se].name+' ist global aktiv':'kein globales Event aktiv';
+  GEV.season=se||null;GEV.msg=data.message||'';GEV.wb=cleanWb(data.worldboss);GEV.locked=cleanLocked(data.locked);GEV.tester=data.tester||'';GEV.checked=Date.now();GEV.status=se?SEASONS[se].name+' ist global aktiv':'kein globales Event aktiv';
   return 'ok';
 }
+// Versionen: Hauptspiel und Test-Server lesen, Beta ins Hauptspiel übernehmen
+const VERS={main:null,beta:null,loading:false,busy:false};
+async function getJsonNoCache(url){if(!/^https:\/\//.test(url||''))return null;try{return DESK?await DESK.fetchJson(url):await (await fetch(url+(url.includes('?')?'&':'?')+'t='+Date.now(),{cache:'no-store'})).json();}catch(e){return null;}}
+async function fetchVersions(){VERS.loading=true;const [m,b]=await Promise.all([getJsonNoCache(stableUrl()),getJsonNoCache(betaUrl())]);
+  const ok=j=>j&&SEMV.test(String(j.version))?{version:String(j.version),notes:Array.isArray(j.notes)?j.notes.filter(n=>typeof n==='string').slice(0,8):[],minApp:SEMV.test(String(j.minApp||''))?String(j.minApp):''}:null;
+  VERS.main=ok(m);VERS.beta=ok(b);VERS.loading=false;return VERS;}
+// Kopiert beta/index.html (gleiche Datei, kein neuer Upload) und beta/version.json in einem Commit ins Hauptspiel
+async function promoteBeta(){
+  const repo=repoName(),tok=DCFG.ghToken;if(!repo)throw new Error('Kein Repository eingestellt');if(!tok)throw new Error('Kein GitHub-Token hinterlegt');
+  const A=`https://api.github.com/repos/${repo}`,H={Authorization:'Bearer '+tok,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
+  const call=async(path,opt)=>{const r=await fetch(A+path,Object.assign({headers:Object.assign({},H,opt&&opt.body?{'Content-Type':'application/json'}:{}),cache:'no-store'},opt||{}));
+    if(!r.ok)throw new Error(r.status===401?'Token ungültig oder abgelaufen':r.status===403||r.status===404?'Token darf das Repository nicht ändern (Contents: Read and write nötig)':r.status===409||r.status===422?'GitHub hat die Änderung abgelehnt ('+r.status+'), bitte nochmal versuchen':'GitHub antwortet mit '+r.status);return r.json();};
+  const ref=await call('/git/ref/heads/main'),head=ref.object.sha,commit=await call('/git/commits/'+head);
+  const tree=await call('/git/trees/'+commit.tree.sha+'?recursive=1'),find=p=>(tree.tree||[]).find(x=>x.path===p&&x.type==='blob');
+  const bi=find('beta/index.html'),bv=find('beta/version.json');if(!bi||!bv)throw new Error('Auf dem Test-Server fehlt index.html oder version.json');
+  const blob=await call('/git/blobs/'+bv.sha);const txt=decodeURIComponent(escape(atob(String(blob.content||'').replace(/\n/g,''))));
+  const j=JSON.parse(txt);if(!SEMV.test(String(j.version)))throw new Error('beta/version.json hat keine gültige Version');
+  if(Array.isArray(j.notes))j.notes=j.notes.map(n=>String(n).replace(/^Beta: /,''));
+  const nt=await call('/git/trees',{method:'POST',body:JSON.stringify({base_tree:commit.tree.sha,tree:[{path:'index.html',mode:'100644',type:'blob',sha:bi.sha},{path:'version.json',mode:'100644',type:'blob',content:JSON.stringify(j,null,2)+'\n'}]})});
+  const nc=await call('/git/commits',{method:'POST',body:JSON.stringify({message:'Beta '+j.version+' ins Hauptspiel übernommen',tree:nt.sha,parents:[head]})});
+  await call('/git/refs/heads/main',{method:'PATCH',body:JSON.stringify({sha:nc.sha})});
+  return String(j.version);
+}
+// Tester: nur Kanalwahl, keine Admin-Rechte
+function renderTester(){
+  const B=$('adminbody'),M=VERS.main,Bv=VERS.beta;
+  const col=(t,I)=>`<div class="vcol"><div class="asub">${t}</div><b class="vbig">${I?esc(I.version):(VERS.loading?'…':'–')}</b>${I?`<ul>${pubNotes(I.notes).map(n=>`<li>${esc(String(n).replace(/^Beta: /,''))}</li>`).join('')}</ul>`:''}</div>`;
+  let h=`<div class="admwrap one"><div class="admmain"><div class="astat"><span><small>Zugang</small><b>Tester</b></span><span><small>Du spielst</small><b>${esc(GAME_VERSION)}${isBeta()?' · Beta':''}</b></span><span><small>Kanal</small><b>${isBeta()?'Test-Server':'Hauptspiel'}</b></span></div><div class="agrid">`;
+  h+=admCard('Test-Server','Hier wählst du, ob dieses Gerät das Hauptspiel oder die Beta vom Test-Server spielt. Die Beta kann Fehler haben. Dein Spielstand bleibt in beiden gleich.',`<div class="vcols">${col('Hauptspiel',M)}${col('Test-Server (Beta)',Bv)}</div>
+    <div class="abtns"><button data-act="tchan" data-id="stable" aria-pressed="${!isBeta()}">Hauptspiel spielen</button><button data-act="tchan" data-id="beta" aria-pressed="${isBeta()}"${Bv?'':' disabled'}>Beta spielen</button><button data-act="tload">Neu laden</button>${DESK&&UPD.app&&UPD.app.updated&&!isBeta()&&M&&cmpVer(GAME_VERSION,M.version)>0?'<button data-act="treset">Zurück zur Hauptspiel-Version (Neustart)</button>':''}</div>`,'wide');
+  h+=`</div><div class="status" id="adminmsg" role="status">${esc(adminMsg)}</div></div></div>`;B.innerHTML=h;
+}
+$('adminbody').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!testerUnlocked||adminUnlocked)return;const act=b.dataset.act,id=b.dataset.id;
+  if(act==='tload'){fetchVersions().then(()=>{if(adminOpen)renderAdmin();});renderAdmin();}
+  else if(act==='tchan'){const beta=id==='beta';
+    if(!DESK){const base=stableUrl().replace(/version\.json(\?.*)?$/,'');if(beta!==WEBBETA&&base){location.href=base+(beta?'beta/':'');return;}}
+    DCFG.channel=beta?'beta':'';saveDcfg();adminMsg=beta?'Suche Beta …':'Suche Hauptspiel-Version …';renderAdmin();
+    checkUpdate(true).then(m=>{adminMsg=(UPD.info&&cmpVer(UPD.info.version,GAME_VERSION)>0)?'Update gefunden: unten im Update-Fenster „Jetzt installieren“, danach startet das Spiel neu.':(!beta&&M&&cmpVer(GAME_VERSION,M.version)>0?'Du hast die Beta installiert. Für das Hauptspiel: „Zurück zur Hauptspiel-Version“.':m);if(adminOpen)renderAdmin();});}
+  else if(act==='treset'&&DESK){DESK.resetUpdate().then(()=>{adminMsg='Beta entfernt. Das Spiel startet neu …';renderAdmin();setTimeout(()=>DESK.restart&&DESK.restart(),1200);});}
+});
 setTimeout(checkGlobal,2000);
 setInterval(()=>{if(state!=='admin')checkGlobal();},5*60*1000);
 // Weltboss-Anzeige im Hauptmenü
