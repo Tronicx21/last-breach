@@ -5,5 +5,9 @@
     "at": 1794243900000,
     "dur": 15,
     "type": "wb2"
-  }
+  },
+  "locked": [
+    "tab:cos"
+  ],
+  "tester": ""
 }
