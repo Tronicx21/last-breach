@@ -5949,10 +5949,10 @@ function lookGroup(look){
     else if(k==='nvg'){g.add(mesh(box(4,2.5,3),dk,0,64,-4.6,false));for(const x of [-1,1])g.add(mesh(cyl(0.8,0.8,1.6,10),emis(0x3cff6a,2.5),x,64,-6.4,false).rotateX(Math.PI/2));}
     else if(k==='boots'){for(const x of [-2.4,2.4]){const r=mesh(new T.TorusGeometry(2.3,0.45,6,16),emis(0x39d0ff,2.2),x,4,0,false);r.rotation.x=Math.PI/2;g.add(r);}}
     else if(k==='medic'){const b=mesh(cyl(2.2,2.2,2.2,12),std(0xf0f0f0),-7.6,46,0,false);b.rotation.z=0.1;g.add(b);g.add(mesh(box(0.4,1.6,0.6),std(0xd02020),-9.85,46,0,false));g.add(mesh(box(0.4,0.6,1.6),std(0xd02020),-9.85,46,0,false));}
-    else if(k==='antenna'){g.add(mesh(cyl(0.3,0.3,22,6),dk,3.5,60,6,false));g.add(mesh(sph(0.9,6,4),emis(0xff3324,3),3.5,71,6,false));}
+    else if(k==='antenna'){const a1=mesh(cyl(0.3,0.3,22,6),dk,3.5,60,6,false),a2=mesh(sph(0.9,6,4),emis(0xff3324,3),3.5,71,6,false);a1.userData.bone=a2.userData.bone='chest';g.add(a1);g.add(a2);}
     else if(k==='admin'){const r=new T.Mesh(new T.RingGeometry(16,19,40),new T.MeshBasicMaterial({color:0xff2a2a,transparent:true,opacity:0.8,depthWrite:false,side:T.DoubleSide}));r.rotation.x=-Math.PI/2;r.position.y=0.8;g.add(r);
       g.add(mesh(new T.OctahedronGeometry(1.8,0),emis(0xff2a2a,4),0,50,-5.8,false));const cr=new T.Group();cr.position.y=69;for(let i=0;i<5;i++){const a=i/5*Math.PI*2;cr.add(mesh(new T.ConeGeometry(0.8,2.6,5),emis(0xffd060,2.5),Math.cos(a)*3,0,Math.sin(a)*3,false));}g.add(cr);}
-    else if(k==='xmas'||k==='halloween'||k==='easter'){const h=makeHats();g.add(h[k==='xmas'?'santa':k==='halloween'?'pumpkin':'ears']);}
+    else if(k==='xmas'||k==='halloween'||k==='easter'){const h=makeHats(),hg=h[k==='xmas'?'santa':k==='halloween'?'pumpkin':'ears'];hg.userData.bone='head';g.add(hg);}
     else if(k.startsWith('c_')){const m=extraModel(k.slice(2));if(m)g.add(m);}
     else if(k==='sc_engel'){const m=extraModel('engel');if(m){m.userData.flap=1;g.add(m);}}
     else if(k==='sc_halo'){const m=extraModel('halo',Object.assign({},EXSPEC.halo,{glow:0xffc830,gi:1.6}));if(m){m.userData.halo=71;g.add(m);}}
@@ -5993,12 +5993,29 @@ function kitGroup(id){
     for(const x of [-3,3])g.add(mesh(box(0.6,12,0.4),emis(0xb070ff,2.2),x,44,-5.8,false));}
   return g;
 }
+// Ausrüstung und Aussehen hängen an den Knochen des Soldatenmodells: sie bewegen sich mit Kopf, Oberkörper, Hüfte und Füßen
+const BONEMAP={head:'mixamorigHead',chest:'mixamorigSpine2',hips:'mixamorigHips',lfoot:'mixamorigLeftFoot',rfoot:'mixamorigRightFoot'};
+function partOf(c){const u=c.userData;if(u.bone)return u.bone;if(u.bob||u.robo||u.mixer||u.free)return null;const y=c.position.y;
+  if(y<1.5)return null;if(y<14)return c.position.x<0?'lfoot':'rfoot';if(y<36)return 'hips';if(y<58)return 'chest';return 'head';}
+function boneOf(sl,name){if(!sl.bones)sl.bones={};if(!(name in sl.bones))sl.bones[name]=sl.root?sl.root.getObjectByName(name)||null:null;return sl.bones[name];}
+function rigDetach(g){if(!g)return;for(const p of g.userData.pivots||[])if(p.parent)p.parent.remove(p);}
+function rigAttach(sl,g){
+  const items=g.children.slice();g.userData.items=items;g.userData.pivots=[];
+  if(!sl.root||!sl.mixer||!boneOf(sl,BONEMAP.head))return;
+  let sk=null;sl.root.traverse(o=>{if(o.isSkinnedMesh&&!sk)sk=o.skeleton;});if(!sk)return;
+  sk.pose();sl.holder.updateMatrixWorld(true);
+  const ks=sl.root.scale.x/(64/SOLDIER.height);
+  for(const c of items){const part=partOf(c),b=part&&boneOf(sl,BONEMAP[part]);if(!b)continue;
+    const pv=new T.Group();pv.scale.setScalar(ks);g.add(pv);pv.add(c);pv.updateMatrixWorld(true);b.attach(pv);g.userData.pivots.push(pv);}
+  sl.mixer.update(0);
+}
 function applyKit(sl,id){
   if(sl.kitId===id)return;sl.kitId=id;const K=OPKIT[id]||{};
-  if(sl.kitG)sl.holder.remove(sl.kitG);sl.kitG=kitGroup(id);sl.holder.add(sl.kitG);
+  if(sl.kitG){sl.holder.remove(sl.kitG);rigDetach(sl.kitG);}sl.kitG=kitGroup(id);sl.holder.add(sl.kitG);
   if(K.tint&&sl.body){if(!sl.body0)sl.body0=sl.body.color.clone();sl.body.color.copy(sl.body0).multiply(new T.Color(K.tint)).multiplyScalar(1.25);}
   if(K.visor)for(const m of sl.mats)if(/visor/i.test(m.name||''))m.emissive.set(K.visor);
   sl.root.scale.setScalar(64/SOLDIER.height*(K.scale||1));
+  rigAttach(sl,sl.kitG);
 }
 // Waffe in den Händen (Mitspieler und Menü-Figuren)
 const GUNLOC={x:5.4,y:39,z:-5};
@@ -6009,10 +6026,10 @@ function applyGun(sl,model){
   g.rotation.y=Math.PI/2;g.position.set(GUNLOC.x,GUNLOC.y,GUNLOC.z);sl.gunG=g;sl.holder.add(g);
 }
 function animKit(sl,now,mv){if(sl.gunG){sl.gunG.position.y=GUNLOC.y+Math.sin(now*(mv?9:1.6))*(mv?0.8:0.25);}
-  if(sl.kitG)for(const c of sl.kitG.children)if(c.userData.cape)c.rotation.x=0.14+Math.sin(now*3)*0.05+(mv?0.25:0);}
-function applyLook(sl,look){const sig=(look||[]).join(',')+(EXTRA.ready?'|E':'');if(sl.lookSig===sig)return;if(sl.lookG)sl.holder.remove(sl.lookG);sl.lookG=lookGroup(look);sl.holder.add(sl.lookG);sl.lookSig=sig;}
+  if(sl.kitG)for(const c of sl.kitG.userData.items||sl.kitG.children)if(c.userData.cape)c.rotation.x=0.14+Math.sin(now*3)*0.05+(mv?0.25:0);}
+function applyLook(sl,look){const sig=(look||[]).join(',')+(EXTRA.ready?'|E':'');if(sl.lookSig===sig)return;if(sl.lookG){sl.holder.remove(sl.lookG);rigDetach(sl.lookG);}sl.lookG=lookGroup(look);sl.holder.add(sl.lookG);rigAttach(sl,sl.lookG);sl.lookSig=sig;}
 function animLook(sl,now,mv){const dt=Math.min(0.05,Math.max(0,now-(sl.lookT||now)));sl.lookT=now;
-  if(sl.lookG)for(const c of sl.lookG.children){if(c.userData.mixer){const A=c.userData.acts;if(A.walk){A.walk.setEffectiveWeight(mv?1:0);A.idle.setEffectiveWeight(mv?0:1);}c.userData.mixer.update(dt);}if(c.userData.bob){c.position.y=70+Math.sin(now*3)*1.2;c.rotation.y=now*0.8;}if(c.userData.wag)c.rotation.x=Math.sin(now*7)*0.25;if(c.userData.flap)c.scale.x=1+0.07*Math.sin(now*(mv?7:3));if(c.userData.halo){c.position.y=c.userData.halo+Math.sin(now*2.4)*0.7;c.rotation.y=now*0.6;}}}
+  if(sl.lookG)for(const c of sl.lookG.userData.items||sl.lookG.children){if(c.userData.mixer){const A=c.userData.acts;if(A.walk){A.walk.setEffectiveWeight(mv?1:0);A.idle.setEffectiveWeight(mv?0:1);}c.userData.mixer.update(dt);}if(c.userData.bob){c.position.y=70+Math.sin(now*3)*1.2;c.rotation.y=now*0.8;}if(c.userData.wag)c.rotation.x=Math.sin(now*7)*0.25;if(c.userData.flap)c.scale.x=1+0.07*Math.sin(now*(mv?7:3));if(c.userData.halo){c.position.y=c.userData.halo+Math.sin(now*2.4)*0.7;c.rotation.y=now*0.6;}}}
 function setOthers(S){
   const useS=SOLDIER.ready,sig=(useS?'S':'P')+S.players.map(p=>p.op.id+p.col+(p.look||[]).join('.')).join('|');
   if(others.sig!==sig){
@@ -9338,6 +9355,10 @@ $('upgbody').addEventListener('click',e=>{const b=e.target.closest('button');if(
 
 /* ---------- Patch Notes ---------- */
 const NOTES=[
+ {v:'0.21.1',t:'Ausrüstung am Körper',l:[
+  'Ausrüstung und Cosmetics hängen jetzt am Skelett der Operatoren: Helme, Hüte und Heiligenschein folgen dem Kopf, Westen, Rucksäcke und Flügel dem Oberkörper, Gürtelteile der Hüfte, Stiefelringe den Füßen',
+  'Passt sich auch an größere oder kleinere Operatoren an (z. B. Kairo)',
+ ]},
  {v:'0.21.0',t:'Weltboss, Spezialwaffen, Cosmetics',l:[
   'Drei Weltbosse mit eigenen 3D-Modellen: Abgrundfürst (Dämon), Drachenkönig und Steinkoloss',
   'Der Admin plant einen Weltboss global zu einer Uhrzeit, dann erscheint er in jedem laufenden Einsatz',
@@ -9668,7 +9689,7 @@ const FPSV={on:false,n:0,acc:0};try{FPSV.on=localStorage.getItem('lastbreach.fps
 $('musvol').value=String(Math.round(SND.mus*100));$('musvol').addEventListener('input',()=>setMusicVol(Number($('musvol').value)/100));
 $('vol').value=String(Math.round(SND.vol*100));$('vol').addEventListener('input',()=>{setVol(Number($('vol').value)/100);if(SND.muted)toggleMute();SFX.hit(false);});
 /* ---------- Version, Updates und Discord ---------- */
-const GAME_VERSION='0.21.0';
+const GAME_VERSION='0.21.1';
 const DESK=window.lbDesktop||null;
 const BAKED={updateUrl:'https://tronicx21.github.io/last-breach/version.json',discordId:'1569055355495780492',repo:'Tronicx21/last-breach'};
 const DESKKEY='lastbreach.desktop.v1';
