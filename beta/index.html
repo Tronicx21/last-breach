@@ -7772,30 +7772,35 @@ const MINIS={
 };
 const MININAMES=[].concat(...Object.values(MINIS).map(a=>a.map(m=>m.n)));
 const ETK=Object.keys(ETYPES);
-// 1 m ≈ 33 Einheiten: Gegner erscheinen 6,5 bis 10 m vom Spieler entfernt, bevorzugt seitlich oder hinter ihm
-const SPAWN_MIN=215,SPAWN_MAX=333;
+// 1 m ≈ 33 Einheiten: Gegner erscheinen 13 bis 19 m vom Spieler entfernt, bevorzugt seitlich oder hinter ihm
+const SPAWN_MIN=430,SPAWN_MAX=630;
 function insideProp(x,y,r){for(const q of propsNear(x,y)){if(q.r){if(Math.hypot(x-q.x,y-q.y)<q.r+r+4)return true;}else if(Math.abs(x-q.x)<q.hw+r+4&&Math.abs(y-q.y)<q.hh+r+4)return true;}return false;}
 function spawnPos(r,boss){
   const al=alive(),P=al.length?al:S.players;const p=P[(Math.random()*P.length)|0]||{x:cam.x,y:cam.y,face:0};
-  let best=null;
-  for(let k=0;k<16;k++){
-    const behind=!boss&&k<10&&Math.random()<0.75,a=behind?p.face+Math.PI+rnd(-1.9,1.9):Math.random()*Math.PI*2;
-    const d=boss?rnd(290,SPAWN_MAX):rnd(SPAWN_MIN,SPAWN_MAX),x=p.x+Math.cos(a)*d,y=p.y+Math.sin(a)*d,lim=ARENA-r-12;
-    if(Math.abs(x)>lim||Math.abs(y)>lim)continue;
-    best={x,y};
+  let best=null;const lim=ARENA-r-12,far=(x,y)=>!S.players.some(o=>!o.down&&!o.gone&&Math.hypot(o.x-x,o.y-y)<SPAWN_MIN-20);
+  for(let k=0;k<24;k++){
+    const behind=!boss&&k<14&&Math.random()<0.75,a=behind?p.face+Math.PI+rnd(-1.9,1.9):Math.random()*Math.PI*2;
+    const d=boss?rnd(SPAWN_MAX-140,SPAWN_MAX):rnd(SPAWN_MIN,SPAWN_MAX),x=p.x+Math.cos(a)*d,y=p.y+Math.sin(a)*d;
+    if(Math.abs(x)>lim||Math.abs(y)>lim||!far(x,y))continue;
+    if(!best)best={x,y};
     if(insideProp(x,y,r))continue;
-    if(S.players.some(o=>!o.down&&Math.hypot(o.x-x,o.y-y)<SPAWN_MIN-20))continue;
-    return best;
+    return {x,y};
   }
-  if(!best){const a=Math.random()*6.28;best={x:Math.max(-ARENA+r,Math.min(ARENA-r,p.x+Math.cos(a)*SPAWN_MIN)),y:Math.max(-ARENA+r,Math.min(ARENA-r,p.y+Math.sin(a)*SPAWN_MIN))};}
-  return best;
+  if(best)return best;
+  // Notfall (z. B. Spieler steht an der Wand): Richtung Kartenmitte, nie direkt neben einen Spieler
+  let fb=null,fd=-1;
+  for(let k=0;k<12;k++){const a=Math.atan2(-p.y,-p.x)+rnd(-1.2,1.2),d=rnd(SPAWN_MIN,SPAWN_MAX);
+    const x=Math.max(-lim,Math.min(lim,p.x+Math.cos(a)*d)),y=Math.max(-lim,Math.min(lim,p.y+Math.sin(a)*d));
+    const m=Math.min(...S.players.filter(o=>!o.down&&!o.gone).map(o=>Math.hypot(o.x-x,o.y-y)),1e9);if(m>fd){fd=m;fb={x,y};}}
+  return fb;
 }
 // Schwierigkeit: nach 10 Minuten steigt sie langsamer weiter, damit die längere Runde fair bleibt
 const diffT=()=>S.t<=600?S.t:600+(S.t-600)*0.45;
 const pN=()=>coop()?S.players.filter(p=>!p.gone).length:1;
 // Team-Level macht Gegner zäher und gefährlicher, damit hohe Stufen nicht alles mit einem Treffer erledigen
-const lvHp=()=>{const L=Math.max(0,((S&&S.lvl)||1)-1);return 1+0.08*L+0.002*L*L;};
-const lvDmg=()=>1+0.03*Math.max(0,((S&&S.lvl)||1)-1);
+// pro Level-up zusätzlich +2 % Leben und Schaden
+const lvHp=()=>{const L=Math.max(0,((S&&S.lvl)||1)-1);return 1+0.10*L+0.002*L*L;};
+const lvDmg=()=>1+0.05*Math.max(0,((S&&S.lvl)||1)-1);
 function spawn(type){
   const T=ETYPES[type],sp=spawnPos(T.r,!!T.boss),n=pN();
   const scale=T.boss?(1+0.7*(n-1))*(1+0.5*(lvHp()-1)):(1+diffT()/110)*(1+0.35*(n-1))*lvHp();
@@ -9493,6 +9498,11 @@ $('upgbody').addEventListener('click',e=>{const b=e.target.closest('button');if(
 const pubNote=x=>!/admin|tester/i.test(String(x));
 const pubNotes=a=>(Array.isArray(a)?a:[]).filter(pubNote);
 const NOTES=[
+ {v:'0.22.3',t:'Gegner & Spawn',l:[
+  'Gegner werden pro Level-up um zusätzliche 2 % stärker (Leben und Schaden)',
+  'Gegner erscheinen deutlich weiter weg (13 bis 19 m statt 6,5 bis 10 m)',
+  'Behoben: An der Kartenwand konnten Gegner direkt neben dir auftauchen',
+ ]},
  {v:'0.22.2',t:'Menü & Sammlung',l:[
   'Geheim-Items in der Sammlung zeigen ihren Namen erst, wenn du sie gefunden hast',
   'Admin kann ganze Hauptmenü-Reiter (Upgrades, Sammlung, Cosmetics, Steuerung) für alle sperren: sie verschwinden aus dem Menü und wirken nicht mehr',
@@ -9663,7 +9673,7 @@ function startGame(bonuses,mapId,season){
   last=performance.now();wantLock();
 }
 
-if(/lbtest/.test(location.href))window.__lb={get S(){return S;},get PROPS(){return PROPS;},WIN,MAXP,get state(){return state;},get NET(){return NET;},spawnElite:()=>spawnElite(),hurt:(e,d)=>hurt(e,d),hurtP:(e,d,pi)=>hurt(e,d,0,0,pi),adminGift:(i,id)=>{const p=S.players[i],g=p&&guestOf(p);if(g)sendTo(g,{t:"gift",id,op:p.op.id});},get bannerTxt(){return bannerTxt;},damagePlayer:(p,d)=>damagePlayer(p,d),giveSecret,lookFor,tabOff,skillBonus,itemBonus,chosenGun,KB,applyTabLocks,isAdminDevice,pubNotes,get GEV2(){return GEV;},get view(){return view;},spawnMini:()=>spawnMini(),loadColl,rollLoot,collBonus,
+if(/lbtest/.test(location.href))window.__lb={get S(){return S;},get PROPS(){return PROPS;},WIN,MAXP,get state(){return state;},get NET(){return NET;},spawnElite:()=>spawnElite(),hurt:(e,d)=>hurt(e,d),hurtP:(e,d,pi)=>hurt(e,d,0,0,pi),adminGift:(i,id)=>{const p=S.players[i],g=p&&guestOf(p);if(g)sendTo(g,{t:"gift",id,op:p.op.id});},get bannerTxt(){return bannerTxt;},damagePlayer:(p,d)=>damagePlayer(p,d),giveSecret,lookFor,tabOff,skillBonus,itemBonus,chosenGun,KB,applyTabLocks,isAdminDevice,pubNotes,get ARENA(){return ARENA;},get view(){return view;},spawnMini:()=>spawnMini(),loadColl,rollLoot,collBonus,
   resetColl:()=>{collMem={};for(const op in COLL)collMem[op]={};saveColl();},sha256,get PROPS(){return PROPS;},LOOK,blocked,
   spawnType:t=>spawn(t),triggerEvent,setWorld,MAPS,mapById,get MAP(){return MAP;},GUNS,dropGun,takeGun,opLevel,addOpXp,freePts,addSkill,collBonus,equipped,setEquip,EVSET,
   get selMap(){return selMap;},set selMap(v){selMap=v;},get GEV(){return GEV;},checkGlobal,get SND(){return SND;},get SFX(){return SFX;},checkUpdate,get UPD(){return UPD;},get DCFG(){return DCFG;},presence,get PRES(){return PRES;},get GAME_VERSION(){return GAME_VERSION;},setSeasonMode,activeSeason,seasonByDate,SEASONS,rollLoot};
@@ -9853,7 +9863,7 @@ const FPSV={on:false,n:0,acc:0};try{FPSV.on=localStorage.getItem('lastbreach.fps
 $('musvol').value=String(Math.round(SND.mus*100));$('musvol').addEventListener('input',()=>setMusicVol(Number($('musvol').value)/100));
 $('vol').value=String(Math.round(SND.vol*100));$('vol').addEventListener('input',()=>{setVol(Number($('vol').value)/100);if(SND.muted)toggleMute();SFX.hit(false);});
 /* ---------- Version, Updates und Discord ---------- */
-const GAME_VERSION='0.22.2';
+const GAME_VERSION='0.22.3';
 const DESK=window.lbDesktop||null;
 const BAKED={updateUrl:'https://tronicx21.github.io/last-breach/version.json',discordId:'1569055355495780492',repo:'Tronicx21/last-breach'};
 const DESKKEY='lastbreach.desktop.v1';
